@@ -4,7 +4,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -22,7 +24,14 @@ public class QuizLevelActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-        userId = mAuth.getCurrentUser().getUid();
+
+        if (mAuth.getCurrentUser() != null) {
+            userId = mAuth.getCurrentUser().getUid();
+        } else {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
 
         btnEasy = findViewById(R.id.btnEasy);
         btnIntermediate = findViewById(R.id.btnIntermediate);
@@ -32,6 +41,7 @@ public class QuizLevelActivity extends AppCompatActivity {
         loadProgress();
 
         btnEasy.setOnClickListener(v -> {
+            Toast.makeText(this, "Easy clicked", Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(QuizLevelActivity.this, ARQuizActivity.class);
             intent.putExtra("level", "easy");
             startActivity(intent);
@@ -46,8 +56,7 @@ public class QuizLevelActivity extends AppCompatActivity {
                             intent.putExtra("level", "intermediate");
                             startActivity(intent);
                         } else {
-                            Toast.makeText(this, "Complete Easy level first!",
-                                    Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Complete Easy level first!", Toast.LENGTH_SHORT).show();
                         }
                     });
         });
@@ -61,8 +70,7 @@ public class QuizLevelActivity extends AppCompatActivity {
                             intent.putExtra("level", "advanced");
                             startActivity(intent);
                         } else {
-                            Toast.makeText(this, "Complete Intermediate level first!",
-                                    Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, "Complete Intermediate level first!", Toast.LENGTH_SHORT).show();
                         }
                     });
         });
@@ -75,10 +83,8 @@ public class QuizLevelActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(document -> {
                     if (document.exists()) {
-                        boolean easyDone = Boolean.TRUE.equals(
-                                document.getBoolean("easyCompleted"));
-                        boolean intermediateDone = Boolean.TRUE.equals(
-                                document.getBoolean("intermediateCompleted"));
+                        boolean easyDone = Boolean.TRUE.equals(document.getBoolean("easyCompleted"));
+                        boolean intermediateDone = Boolean.TRUE.equals(document.getBoolean("intermediateCompleted"));
                         updateButtonStates(easyDone, intermediateDone);
                     }
                 });

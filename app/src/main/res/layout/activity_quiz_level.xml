@@ -2,117 +2,59 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0E2A">
+    android:background="#0A0E2A"
+    android:padding="24dp">
 
-    <!-- Title -->
     <TextView
-        android:id="@+id/tvLevelTitle"
+        android:id="@+id/tvQuizTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select Level"
+        android:text="Select Quiz Level"
         android:textColor="#FFFFFF"
         android:textSize="28sp"
         android:textStyle="bold"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="80dp"/>
-
-    <!-- Subtitle -->
-    <TextView
-        android:id="@+id/tvLevelSubtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Choose your difficulty level"
-        android:textColor="#00BCD4"
-        android:textSize="14sp"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/tvLevelTitle"
-        android:layout_marginTop="10dp"/>
-
-    <!-- Easy Button -->
-    <Button
-        android:id="@+id/btnEasy"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Easy"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:backgroundTint="#4CAF50"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/tvLevelSubtitle"
         android:layout_marginTop="60dp"/>
 
-    <!-- Easy Description -->
-    <TextView
-        android:id="@+id/tvEasyDesc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Basic questions about network devices"
-        android:textColor="#AAAAAA"
-        android:textSize="12sp"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnEasy"
-        android:layout_marginTop="5dp"/>
+    <Button
+        android:id="@+id/btnEasy"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Easy"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00BCD4"
+        android:layout_below="@id/tvQuizTitle"
+        android:layout_marginTop="50dp"/>
 
-    <!-- Intermediate Button -->
     <Button
         android:id="@+id/btnIntermediate"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Intermediate 🔒 Locked"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Intermediate"
         android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:backgroundTint="#FF9800"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/tvEasyDesc"
-        android:layout_marginTop="30dp"/>
+        android:backgroundTint="#00BCD4"
+        android:layout_below="@id/btnEasy"
+        android:layout_marginTop="20dp"/>
 
-    <!-- Intermediate Description -->
-    <TextView
-        android:id="@+id/tvIntermediateDesc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Networking scenarios and device functions"
-        android:textColor="#AAAAAA"
-        android:textSize="12sp"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnIntermediate"
-        android:layout_marginTop="5dp"/>
-
-    <!-- Advanced Button -->
     <Button
         android:id="@+id/btnAdvanced"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Advanced 🔒 Locked"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="Advanced"
         android:textColor="#FFFFFF"
-        android:textSize="16sp"
-        android:backgroundTint="#F44336"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/tvIntermediateDesc"
-        android:layout_marginTop="30dp"/>
+        android:backgroundTint="#00BCD4"
+        android:layout_below="@id/btnIntermediate"
+        android:layout_marginTop="20dp"/>
 
-    <!-- Advanced Description -->
-    <TextView
-        android:id="@+id/tvAdvancedDesc"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Problem solving and analysis questions"
-        android:textColor="#AAAAAA"
-        android:textSize="12sp"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnAdvanced"
-        android:layout_marginTop="5dp"/>
-
-    <!-- Back Button -->
     <Button
         android:id="@+id/btnBack"
-        android:layout_width="150dp"
-        android:layout_height="45dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:text="Back"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#607D8B"
-        android:layout_centerHorizontal="true"
+        android:textColor="#00BCD4"
+        style="?android:attr/borderlessButtonStyle"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="40dp"/>
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="20dp"/>
 
 </RelativeLayout>

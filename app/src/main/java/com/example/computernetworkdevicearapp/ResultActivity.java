@@ -17,6 +17,11 @@ import nl.dionsegijn.konfetti.core.models.Shape;
 import nl.dionsegijn.konfetti.core.models.Size;
 import nl.dionsegijn.konfetti.xml.KonfettiView;
 
+import nl.dionsegijn.konfetti.core.PartyFactory;
+import nl.dionsegijn.konfetti.core.emitter.Emitter;
+import nl.dionsegijn.konfetti.core.emitter.EmitterConfig;
+import java.util.concurrent.TimeUnit;
+
 public class ResultActivity extends AppCompatActivity {
 
     private TextView tvResultScore, tvResultLevel, tvResultMessage;
@@ -83,29 +88,32 @@ public class ResultActivity extends AppCompatActivity {
     }
 
     private void showKonfetti(int score, int total) {
-        int confettiAmount = 80;
+        long confettiAmount = 80L;
 
         if (total > 0) {
             double percentage = (double) score / total * 100;
 
             if (percentage == 100) {
-                confettiAmount = 220;
+                confettiAmount = 220L;
             } else if (percentage >= 80) {
-                confettiAmount = 160;
+                confettiAmount = 160L;
             } else if (percentage >= 60) {
-                confettiAmount = 120;
+                confettiAmount = 120L;
             } else {
-                confettiAmount = 80;
+                confettiAmount = 80L;
             }
         }
 
-        List<Party> parties = Arrays.asList(
-                new Party(
-                        0f,
-                        30f,
-                        0.9f,
-                        360,
-                        Arrays.asList(
+        EmitterConfig emitterConfig = new Emitter(5L, TimeUnit.SECONDS).perSecond((int)confettiAmount);
+        Party party = new PartyFactory(emitterConfig)
+                .angle(270)
+                .spread(360)
+                .setSpeedBetween(0f, 30f)
+                .timeToLive(2500L)
+                .shapes(Shape.Circle.INSTANCE, Shape.Square.INSTANCE)
+                .sizes(new Size(12, 5f, 0.2f), new Size(16, 6f, 0.2f))
+                .position(new Position.Relative(0.5, 0.3))
+                .colors(Arrays.asList(
                                 Color.YELLOW,
                                 Color.GREEN,
                                 Color.CYAN,
@@ -113,21 +121,9 @@ public class ResultActivity extends AppCompatActivity {
                                 Color.WHITE,
                                 Color.parseColor("#FF6B6B"),
                                 Color.parseColor("#4D96FF")
-                        ),
-                        Arrays.asList(
-                                Shape.Circle,
-                                Shape.Square
-                        ),
-                        Arrays.asList(
-                                new Size(12, 5f),
-                                new Size(16, 6f)
-                        ),
-                        2500L,
-                        confettiAmount,
-                        new Position.Relative(0.5, 0.0)
-                )
-        );
+                        ))
+                .build();
 
-        viewKonfetti.start(parties);
+        viewKonfetti.start(party);
     }
 }

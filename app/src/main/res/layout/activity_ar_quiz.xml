@@ -4,11 +4,12 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
-    <!-- AR View -->
-   <io.github.sceneview.ar.ArSceneView
+    <!-- Temporary placeholder instead of AR view -->
+    <FrameLayout
         android:id="@+id/arSceneView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:background="#101820" />
 
     <!-- Top Bar -->
     <RelativeLayout
@@ -38,15 +39,14 @@
             android:textStyle="bold"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"/>
-
     </RelativeLayout>
 
-    <!-- Device Name Label -->
+    <!-- Device Label -->
     <TextView
         android:id="@+id/tvDeviceName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Point camera at flat surface"
+        android:text="📡 Network Device"
         android:textColor="#00BCD4"
         android:textSize="14sp"
         android:textStyle="bold"
@@ -66,7 +66,6 @@
         android:padding="16dp"
         android:layout_alignParentBottom="true">
 
-        <!-- Question Text -->
         <TextView
             android:id="@+id/tvQuestion"
             android:layout_width="match_parent"
@@ -77,7 +76,6 @@
             android:textStyle="bold"
             android:layout_marginBottom="12dp"/>
 
-        <!-- Option A -->
         <Button
             android:id="@+id/btnOptionA"
             android:layout_width="match_parent"
@@ -87,7 +85,6 @@
             android:backgroundTint="#1E2A4A"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Option B -->
         <Button
             android:id="@+id/btnOptionB"
             android:layout_width="match_parent"
@@ -97,7 +94,6 @@
             android:backgroundTint="#1E2A4A"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Option C -->
         <Button
             android:id="@+id/btnOptionC"
             android:layout_width="match_parent"
@@ -107,7 +103,6 @@
             android:backgroundTint="#1E2A4A"
             android:layout_marginBottom="8dp"/>
 
-        <!-- Option D -->
         <Button
             android:id="@+id/btnOptionD"
             android:layout_width="match_parent"

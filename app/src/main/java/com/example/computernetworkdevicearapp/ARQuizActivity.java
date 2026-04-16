@@ -1,5 +1,6 @@
 package com.example.computernetworkdevicearapp;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
@@ -7,10 +8,13 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,12 +22,14 @@ import java.util.Map;
 
 public class ARQuizActivity extends AppCompatActivity {
 
+    private FrameLayout arSceneView;
     private TextView tvQuestion, tvQuestionNumber, tvScore, tvDeviceName;
     private Button btnOptionA, btnOptionB, btnOptionC, btnOptionD;
+
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
 
-    private List<Map<String, Object>> questions = new ArrayList<>();
+    private final List<Map<String, Object>> questions = new ArrayList<>();
     private int currentQuestionIndex = 0;
     private int score = 0;
     private String level;
@@ -37,6 +43,15 @@ public class ARQuizActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         level = getIntent().getStringExtra("level");
 
+        Toast.makeText(this, "ARQuizActivity opened", Toast.LENGTH_SHORT).show();
+
+        if (level == null || level.trim().isEmpty()) {
+            Toast.makeText(this, "Quiz level not found", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
+        arSceneView = findViewById(R.id.arSceneView);
         tvQuestion = findViewById(R.id.tvQuestion);
         tvQuestionNumber = findViewById(R.id.tvQuestionNumber);
         tvScore = findViewById(R.id.tvScore);
@@ -46,12 +61,21 @@ public class ARQuizActivity extends AppCompatActivity {
         btnOptionC = findViewById(R.id.btnOptionC);
         btnOptionD = findViewById(R.id.btnOptionD);
 
-        loadQuestions();
+        if (arSceneView == null || tvQuestion == null || tvQuestionNumber == null ||
+                tvScore == null || tvDeviceName == null ||
+                btnOptionA == null || btnOptionB == null ||
+                btnOptionC == null || btnOptionD == null) {
+            Toast.makeText(this, "Missing views in activity_ar_quiz.xml", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
 
         btnOptionA.setOnClickListener(v -> checkAnswer("A"));
         btnOptionB.setOnClickListener(v -> checkAnswer("B"));
         btnOptionC.setOnClickListener(v -> checkAnswer("C"));
         btnOptionD.setOnClickListener(v -> checkAnswer("D"));
+
+        loadQuestions();
     }
 
     private void loadQuestions() {
@@ -61,16 +85,13 @@ public class ARQuizActivity extends AppCompatActivity {
                 .whereEqualTo("level", level.toLowerCase())
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-
                     questions.clear();
 
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         questions.add(doc.getData());
                     }
 
-                    Toast.makeText(this,
-                            "Questions loaded: " + questions.size(),
-                            Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Questions loaded: " + questions.size(), Toast.LENGTH_LONG).show();
 
                     if (!questions.isEmpty()) {
                         showQuestion();
@@ -80,11 +101,11 @@ public class ARQuizActivity extends AppCompatActivity {
                                 Toast.LENGTH_LONG).show();
                     }
                 })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this,
-                            "Firestore Error: " + e.getMessage(),
-                            Toast.LENGTH_LONG).show();
-                });
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                "Firestore Error: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show()
+                );
     }
 
     private void showQuestion() {
@@ -96,22 +117,26 @@ public class ARQuizActivity extends AppCompatActivity {
         Map<String, Object> question = questions.get(currentQuestionIndex);
         String deviceName = (String) question.get("device");
 
-        tvQuestionNumber.setText("Question " + (currentQuestionIndex + 1)
-                + "/" + questions.size());
+        tvQuestionNumber.setText("Question " + (currentQuestionIndex + 1) + "/" + questions.size());
         tvScore.setText("Score: " + score);
-        tvQuestion.setText((String) question.get("question_text"));
+        tvQuestion.setText(String.valueOf(question.get("question_text")));
 
-        btnOptionA.setText("A. " + question.get("option_a"));
-        btnOptionB.setText("B. " + question.get("option_b"));
-        btnOptionC.setText("C. " + question.get("option_c"));
-        btnOptionD.setText("D. " + question.get("option_d"));
+        btnOptionA.setText("A. " + String.valueOf(question.get("option_a")));
+        btnOptionB.setText("B. " + String.valueOf(question.get("option_b")));
+        btnOptionC.setText("C. " + String.valueOf(question.get("option_c")));
+        btnOptionD.setText("D. " + String.valueOf(question.get("option_d")));
 
         updateDeviceLabel(deviceName);
         resetButtonColors();
+        setButtonsEnabled(true);
     }
 
     private void updateDeviceLabel(String deviceName) {
-        if (deviceName == null) return;
+        if (deviceName == null) {
+            tvDeviceName.setText("📡 Network Device");
+            return;
+        }
+
         switch (deviceName.toLowerCase()) {
             case "router":
                 tvDeviceName.setText("📡 Router");
@@ -129,6 +154,8 @@ public class ARQuizActivity extends AppCompatActivity {
     }
 
     private void checkAnswer(String selected) {
+        if (currentQuestionIndex >= questions.size()) return;
+
         Map<String, Object> question = questions.get(currentQuestionIndex);
         String correct = (String) question.get("correct_answer");
 
@@ -140,26 +167,34 @@ public class ARQuizActivity extends AppCompatActivity {
             Toast.makeText(this, "✅ Correct!", Toast.LENGTH_SHORT).show();
         } else {
             highlightButton(selected, false);
-            highlightButton(correct, true);
-            Toast.makeText(this, "❌ Wrong! Correct: " + correct,
-                    Toast.LENGTH_SHORT).show();
+            if (correct != null) {
+                highlightButton(correct, true);
+            }
+            Toast.makeText(this, "❌ Wrong! Correct: " + correct, Toast.LENGTH_SHORT).show();
         }
 
         new Handler().postDelayed(() -> {
             currentQuestionIndex++;
-            setButtonsEnabled(true);
             showQuestion();
         }, 1500);
     }
 
     private void highlightButton(String option, boolean correct) {
-        int color = correct ? Color.parseColor("#4CAF50")
-                : Color.parseColor("#F44336");
+        int color = correct ? Color.parseColor("#4CAF50") : Color.parseColor("#F44336");
+
         switch (option) {
-            case "A": btnOptionA.setBackgroundColor(color); break;
-            case "B": btnOptionB.setBackgroundColor(color); break;
-            case "C": btnOptionC.setBackgroundColor(color); break;
-            case "D": btnOptionD.setBackgroundColor(color); break;
+            case "A":
+                btnOptionA.setBackgroundColor(color);
+                break;
+            case "B":
+                btnOptionB.setBackgroundColor(color);
+                break;
+            case "C":
+                btnOptionC.setBackgroundColor(color);
+                break;
+            case "D":
+                btnOptionD.setBackgroundColor(color);
+                break;
         }
     }
 
@@ -179,6 +214,12 @@ public class ARQuizActivity extends AppCompatActivity {
     }
 
     private void finishQuiz() {
+        if (mAuth.getCurrentUser() == null) {
+            Toast.makeText(this, "User not logged in", Toast.LENGTH_LONG).show();
+            finish();
+            return;
+        }
+
         String userId = mAuth.getCurrentUser().getUid();
         Map<String, Object> updates = new HashMap<>();
         updates.put(level + "Score", score);
@@ -187,10 +228,17 @@ public class ARQuizActivity extends AppCompatActivity {
         db.collection("users").document(userId)
                 .update(updates)
                 .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, "Quiz Complete! Score: "
-                                    + score + "/" + questions.size(),
-                            Toast.LENGTH_LONG).show();
+                    Intent intent = new Intent(ARQuizActivity.this, ResultActivity.class);
+                    intent.putExtra("score", score);
+                    intent.putExtra("total", questions.size());
+                    intent.putExtra("level", level);
+                    startActivity(intent);
                     finish();
-                });
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this,
+                                "Failed to save score: " + e.getMessage(),
+                                Toast.LENGTH_LONG).show()
+                );
     }
 }
