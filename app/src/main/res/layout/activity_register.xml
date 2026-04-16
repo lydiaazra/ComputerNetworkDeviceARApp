@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0E2A"
+    android:padding="24dp">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvRegisterTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Create Account"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="80dp"/>
+
+    <!-- Email Field -->
+    <EditText
+        android:id="@+id/etRegEmail"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:hint="Email"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#AAAAAA"
+        android:background="@drawable/edit_text_bg"
+        android:paddingStart="16dp"
+        android:inputType="textEmailAddress"
+        android:layout_below="@id/tvRegisterTitle"
+        android:layout_marginTop="50dp"/>
+
+    <!-- Password Field -->
+    <EditText
+        android:id="@+id/etRegPassword"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:hint="Password"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#AAAAAA"
+        android:background="@drawable/edit_text_bg"
+        android:paddingStart="16dp"
+        android:inputType="textPassword"
+        android:layout_below="@id/etRegEmail"
+        android:layout_marginTop="16dp"/>
+
+    <!-- Register Button -->
+
+    <!-- Back to Login -->
+
+    <Button
+        android:id="@+id/btnRegister"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_below="@id/etRegPassword"
+        android:layout_marginTop="69dp"
+        android:backgroundTint="#00BCD4"
+        android:text="REGISTER"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/tvBackToLogin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Already have an account? Login here"
+        android:textColor="#00BCD4"
+        android:textSize="14sp"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/btnRegister"
+        android:layout_marginTop="16dp"/>
+
+</RelativeLayout>

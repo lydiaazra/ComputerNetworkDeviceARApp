@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "567677594480",
+    "project_id": "computernetworkdevicearapp",
+    "storage_bucket": "computernetworkdevicearapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567677594480:android:14e2726616bed132b37db5",
+        "android_client_info": {
+          "package_name": "com.example.computernetworkdevicearapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqJCT78mQPqCy-i3wa0-U4zQhNgvoUGJA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

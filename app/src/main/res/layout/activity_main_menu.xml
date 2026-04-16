@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0A0E2A">
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/tvMenuTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Main Menu"
+        android:textColor="#FFFFFF"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="80dp"/>
+
+    <!-- AR Button -->
+    <Button
+        android:id="@+id/btnAR"
+        android:layout_width="250dp"
+        android:layout_height="55dp"
+        android:text="AR Network Devices"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#00BCD4"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/tvMenuTitle"
+        android:layout_marginTop="60dp"/>
+
+    <!-- Quiz Button -->
+    <Button
+        android:id="@+id/btnQuiz"
+        android:layout_width="250dp"
+        android:layout_height="55dp"
+        android:text="Exercise / Quiz"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#3F51B5"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/btnAR"
+        android:layout_marginTop="20dp"/>
+
+    <!-- Avatar Button -->
+    <Button
+        android:id="@+id/btnAvatar"
+        android:layout_width="250dp"
+        android:layout_height="55dp"
+        android:text="Avatar Assistant"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#9C27B0"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/btnQuiz"
+        android:layout_marginTop="20dp"/>
+
+    <!-- Exit Button -->
+    <Button
+        android:id="@+id/btnExit"
+        android:layout_width="250dp"
+        android:layout_height="55dp"
+        android:text="Exit"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#F44336"
+        android:layout_centerHorizontal="true"
+        android:layout_below="@id/btnAvatar"
+        android:layout_marginTop="20dp"/>
+
+</RelativeLayout>
