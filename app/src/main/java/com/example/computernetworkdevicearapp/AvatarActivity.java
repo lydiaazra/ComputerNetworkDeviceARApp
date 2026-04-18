@@ -3,12 +3,21 @@ package com.example.computernetworkdevicearapp;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
+
+import io.github.sceneview.ar.ArSceneView;
+import io.github.sceneview.ar.node.ArModelNode;
+import io.github.sceneview.ar.node.PlacementMode;
+import dev.romainguy.kotlin.math.Float3;
 
 public class AvatarActivity extends AppCompatActivity {
 
-    private Button btnDeviceRouter, btnDeviceSwitch, btnDeviceHub,
-            btnDeviceAccessPoint, btnDeviceModem, btnBack;
+    private ArSceneView arSceneView;
+    private ArModelNode modelNode;
+    private Button btnBack, btnDeviceRouter, btnDeviceSwitch, btnDeviceHub,
+            btnDeviceAccessPoint, btnDeviceModem, btnPlaceAvatar;
     private TextView tvDeviceTitle, tvExplanation;
 
     @Override
@@ -16,106 +25,61 @@ public class AvatarActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_avatar);
 
+        arSceneView = findViewById(R.id.arSceneView);
+        tvDeviceTitle = findViewById(R.id.tvDeviceTitle);
+        tvExplanation = findViewById(R.id.tvExplanation);
+        btnBack = findViewById(R.id.btnBack);
+
         btnDeviceRouter = findViewById(R.id.btnDeviceRouter);
         btnDeviceSwitch = findViewById(R.id.btnDeviceSwitch);
         btnDeviceHub = findViewById(R.id.btnDeviceHub);
         btnDeviceAccessPoint = findViewById(R.id.btnDeviceAccessPoint);
         btnDeviceModem = findViewById(R.id.btnDeviceModem);
-        tvDeviceTitle = findViewById(R.id.tvDeviceTitle);
-        tvExplanation = findViewById(R.id.tvExplanation);
-        btnBack = findViewById(R.id.btnBack);
+        btnPlaceAvatar = findViewById(R.id.btnPlaceAvatar);
 
-        btnDeviceRouter.setOnClickListener(v ->
-                showDeviceInfo("Router"));
-        btnDeviceSwitch.setOnClickListener(v ->
-                showDeviceInfo("Switch"));
-        btnDeviceHub.setOnClickListener(v ->
-                showDeviceInfo("Hub"));
-        btnDeviceAccessPoint.setOnClickListener(v ->
-                showDeviceInfo("Access Point"));
-        btnDeviceModem.setOnClickListener(v ->
-                showDeviceInfo("Modem"));
+        modelNode = new ArModelNode(
+                PlacementMode.PLANE_HORIZONTAL,
+                new Float3(0f, 0f, 0f),
+                true,
+                false
+        );
+
+        modelNode.loadModelGlbAsync(
+                "models/avatar.glb",
+                true,
+                0.5f,
+                null,
+                null,
+                null
+        );
+
+        arSceneView.addChild(modelNode);
+
+        btnPlaceAvatar.setOnClickListener(v -> {
+            modelNode.anchor();
+            Toast.makeText(this, "Avatar placed!", Toast.LENGTH_SHORT).show();
+        });
+
+        btnDeviceRouter.setOnClickListener(v -> showDeviceInfo("Router",
+                "A router is a networking device that forwards data packets between computer networks. Routers perform the traffic directing functions on the Internet."));
+
+        btnDeviceSwitch.setOnClickListener(v -> showDeviceInfo("Switch",
+                "A network switch is networking hardware that connects devices on a computer network by using packet switching to receive and forward data to the destination device."));
+
+        btnDeviceHub.setOnClickListener(v -> showDeviceInfo("Hub",
+                "A network hub is a node that broadcasts data to every computer or Ethernet-based device connected to it. It is less intelligent than a switch."));
+
+        btnDeviceAccessPoint.setOnClickListener(v -> showDeviceInfo("Access Point",
+                "A wireless access point (WAP) is a networking hardware device that allows other Wi-Fi devices to connect to a wired network."));
+
+        btnDeviceModem.setOnClickListener(v -> showDeviceInfo("Modem",
+                "A modem (modulator-demodulator) is a device that converts signals from one form to another, allowing computers to communicate over telephone lines or cable systems."));
 
         btnBack.setOnClickListener(v -> finish());
     }
 
-    private void showDeviceInfo(String device) {
-        tvDeviceTitle.setText("📡 " + device);
-        tvExplanation.setText(getDeviceExplanation(device));
-    }
-
-    private String getDeviceExplanation(String device) {
-        switch (device) {
-            case "Router":
-                return "🔴 ROUTER\n\n" +
-                        "A router is a networking device that connects multiple " +
-                        "networks together, such as linking a home or office " +
-                        "network to the internet.\n\n" +
-                        "📌 Key Functions:\n" +
-                        "• Directs data packets between networks\n" +
-                        "• Assigns IP addresses using DHCP\n" +
-                        "• Operates at Layer 3 (Network Layer) of OSI model\n" +
-                        "• Provides firewall and security features\n" +
-                        "• Supports both wired and wireless connections\n\n" +
-                        "💡 Example: The WiFi device at your home that " +
-                        "connects all your devices to the internet is a router!";
-
-            case "Switch":
-                return "🔵 SWITCH\n\n" +
-                        "A switch is a networking device that connects multiple " +
-                        "devices within a Local Area Network (LAN).\n\n" +
-                        "📌 Key Functions:\n" +
-                        "• Uses MAC addresses to forward data\n" +
-                        "• Operates at Layer 2 (Data Link Layer) of OSI model\n" +
-                        "• Sends data only to the intended device\n" +
-                        "• Supports VLAN configuration\n" +
-                        "• More efficient than a hub\n\n" +
-                        "💡 Example: In a computer lab, a switch connects " +
-                        "all computers together so they can communicate!";
-
-            case "Hub":
-                return "🟡 HUB\n\n" +
-                        "A hub is a basic networking device that connects " +
-                        "multiple devices in a network. It is now largely " +
-                        "outdated and replaced by switches.\n\n" +
-                        "📌 Key Functions:\n" +
-                        "• Broadcasts data to ALL connected devices\n" +
-                        "• Operates at Layer 1 (Physical Layer) of OSI model\n" +
-                        "• Does not filter or direct traffic\n" +
-                        "• Can cause data collisions\n" +
-                        "• Simple and cheap but inefficient\n\n" +
-                        "💡 Example: An old office network might use a hub " +
-                        "to connect computers, but this causes slowdowns!";
-
-            case "Access Point":
-                return "📶 ACCESS POINT\n\n" +
-                        "A wireless access point (WAP) is a device that " +
-                        "creates a wireless local area network (WLAN).\n\n" +
-                        "📌 Key Functions:\n" +
-                        "• Provides WiFi connectivity to devices\n" +
-                        "• Extends wireless network coverage\n" +
-                        "• Connects wireless devices to wired network\n" +
-                        "• Supports multiple simultaneous connections\n" +
-                        "• Can be managed centrally\n\n" +
-                        "💡 Example: The WiFi hotspot in a university " +
-                        "library is provided by multiple access points!";
-
-            case "Modem":
-                return "🌐 MODEM\n\n" +
-                        "A modem (Modulator-Demodulator) is a device that " +
-                        "converts digital signals to analog and vice versa " +
-                        "for internet connectivity.\n\n" +
-                        "📌 Key Functions:\n" +
-                        "• Converts digital data to analog signals\n" +
-                        "• Connects your network to ISP\n" +
-                        "• Enables internet access\n" +
-                        "• Works with DSL, cable, or fiber connections\n" +
-                        "• Often combined with router in home devices\n\n" +
-                        "💡 Example: The device provided by your internet " +
-                        "service provider (ISP) is typically a modem!";
-
-            default:
-                return "Select a device to learn about it!";
-        }
+    private void showDeviceInfo(String title, String explanation) {
+        tvDeviceTitle.setText(title);
+        tvExplanation.setText(explanation);
     }
 }

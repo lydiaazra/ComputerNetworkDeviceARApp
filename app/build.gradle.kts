@@ -48,6 +48,10 @@ dependencies {
 
     // ARCore
     implementation("com.google.ar:core:1.41.0")
+    
+    // SceneView
+    implementation("io.github.sceneview:arsceneview:0.9.10")
+
 
     // KonfettiView
     implementation("nl.dionsegijn:konfetti-xml:2.0.5")
