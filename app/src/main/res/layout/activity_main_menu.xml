@@ -1,67 +1,136 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0A0E2A">
+    android:background="@drawable/bg_main_gradient"
+    android:padding="24dp">
 
-    <!-- Title -->
+    <!-- Top glow -->
+    <View
+        android:id="@+id/topGlow"
+        android:layout_width="220dp"
+        android:layout_height="220dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_glow_circle" />
+
+    <!-- App Icon -->
+    <ImageView
+        android:id="@+id/imgMenuIcon"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="35dp"
+        android:src="@mipmap/ic_launcher"
+        android:scaleType="fitCenter" />
+
+    <!-- Welcome Text -->
     <TextView
         android:id="@+id/tvMenuTitle"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@id/imgMenuIcon"
+        android:layout_marginTop="20dp"
         android:text="Main Menu"
+        android:textAlignment="center"
         android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="80dp"/>
+        android:textSize="30sp"
+        android:textStyle="bold" />
 
-    <!-- AR Button -->
-    <Button
-        android:id="@+id/btnAR"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="AR Network Devices"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#00BCD4"
-        android:layout_centerHorizontal="true"
+    <!-- Subtitle -->
+    <TextView
+        android:id="@+id/tvSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_below="@id/tvMenuTitle"
-        android:layout_marginTop="60dp"/>
+        android:layout_marginTop="8dp"
+        android:text="Choose a feature to continue your learning journey"
+        android:textAlignment="center"
+        android:textColor="#B7C9E6"
+        android:textSize="14sp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp" />
 
-    <!-- Quiz Button -->
-    <Button
-        android:id="@+id/btnQuiz"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Quiz"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#3F51B5"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnAR"
-        android:layout_marginTop="20dp"/>
+    <!-- Menu Card -->
+    <LinearLayout
+        android:id="@+id/menuCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tvSubtitle"
+        android:layout_marginTop="60dp"
+        android:background="@drawable/bg_info_card"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <!-- Avatar Button -->
-    <Button
-        android:id="@+id/btnAvatar"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Avatar Assistant"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#9C27B0"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnQuiz"
-        android:layout_marginTop="20dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAR"
+            android:layout_width="150dp"
+            android:layout_height="46dp"
+            android:layout_gravity="center_horizontal"
+            android:text="AR Devices"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="#4A67F5"
+            app:cornerRadius="14dp"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="#FFFFFF" />
 
-    <!-- Exit Button -->
-    <Button
-        android:id="@+id/btnExit"
-        android:layout_width="250dp"
-        android:layout_height="55dp"
-        android:text="Exit"
-        android:textColor="#FFFFFF"
-        android:backgroundTint="#F44336"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/btnAvatar"
-        android:layout_marginTop="20dp"/>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuiz"
+            android:layout_width="150dp"
+            android:layout_height="46dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="Quiz"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="#4A67F5"
+            app:cornerRadius="14dp"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="#FFFFFF" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnAvatar"
+            android:layout_width="150dp"
+            android:layout_height="46dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="Avatar Assistant"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="#4A67F5"
+            app:cornerRadius="14dp"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="#FFFFFF" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExit"
+            android:layout_width="150dp"
+            android:layout_height="46dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="Logout"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            app:backgroundTint="#4A67F5"
+            app:cornerRadius="14dp"
+
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="#FFFFFF" />
+    </LinearLayout>
 
 </RelativeLayout>
