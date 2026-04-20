@@ -23,10 +23,10 @@ public class MainMenuActivity extends AppCompatActivity {
         btnAvatar = findViewById(R.id.btnAvatar);
         btnExit = findViewById(R.id.btnExit);
 
-        // AR Button - goes to AR Quiz
+        // AR Button - goes to Device Display
         btnAR.setOnClickListener(v -> {
-            Intent intent = new Intent(MainMenuActivity.this, ARQuizActivity.class);
-            intent.putExtra("level", "easy");
+            Intent intent = new Intent(MainMenuActivity.this, DeviceDisplay.class);
+            intent.putExtra("deviceName", "Router");
             startActivity(intent);
         });
 
