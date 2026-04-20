@@ -55,6 +55,9 @@
         <!-- Result Screen Screen -->
         <activity android:name=".ResultActivity"/>
 
+        <!-- AR Device Screen -->
+        <activity android:name=".DeviceDisplay"/>
+
     </application>
 
 </manifest>
