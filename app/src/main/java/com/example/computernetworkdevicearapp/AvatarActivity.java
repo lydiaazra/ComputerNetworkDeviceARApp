@@ -1,82 +1,172 @@
 package com.example.computernetworkdevicearapp;
 
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import io.github.sceneview.ar.ArSceneView;
-import io.github.sceneview.ar.node.ArModelNode;
-import io.github.sceneview.ar.node.PlacementMode;
-import dev.romainguy.kotlin.math.Float3;
+import com.google.ar.core.Anchor;
+import com.google.ar.core.Config;
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.ArSceneView;
+import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.ux.ArFragment;
+import com.google.ar.sceneform.ux.TransformableNode;
 
 public class AvatarActivity extends AppCompatActivity {
 
-    private ArSceneView arSceneView;
-    private ArModelNode modelNode;
-    private Button btnBack, btnDeviceRouter, btnDeviceSwitch, btnDeviceHub,
-            btnDeviceAccessPoint, btnDeviceModem, btnPlaceAvatar;
+    private static final String TAG = "AvatarActivity";
+
+    // AR
+    private ArFragment arFragment;
+    private AnchorNode anchorNode;
+    private boolean    modelPlaced = false;
+
+    // UI
+    private Button   btnBack, btnDeviceRouter, btnDeviceSwitch, btnPlaceAvatar;
     private TextView tvDeviceTitle, tvExplanation;
+
+    // -------------------------------------------------------------------------
+    // Lifecycle
+    // -------------------------------------------------------------------------
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_avatar);
 
-        arSceneView = findViewById(R.id.arSceneView);
-        tvDeviceTitle = findViewById(R.id.tvDeviceTitle);
-        tvExplanation = findViewById(R.id.tvExplanation);
-        btnBack = findViewById(R.id.btnBack);
+        bindViews();
+        setupArFragment();   // ← session config lives here
+        setupButtons();
+    }
 
+    // -------------------------------------------------------------------------
+    // View binding
+    // -------------------------------------------------------------------------
+
+    private void bindViews() {
+        tvDeviceTitle   = findViewById(R.id.tvDeviceTitle);
+        tvExplanation   = findViewById(R.id.tvExplanation);
+        btnBack         = findViewById(R.id.btnBack);
         btnDeviceRouter = findViewById(R.id.btnDeviceRouter);
         btnDeviceSwitch = findViewById(R.id.btnDeviceSwitch);
-        btnDeviceHub = findViewById(R.id.btnDeviceHub);
-        btnDeviceAccessPoint = findViewById(R.id.btnDeviceAccessPoint);
-        btnDeviceModem = findViewById(R.id.btnDeviceModem);
-        btnPlaceAvatar = findViewById(R.id.btnPlaceAvatar);
+        btnPlaceAvatar  = findViewById(R.id.btnPlaceAvatar);
+    }
 
-        modelNode = new ArModelNode(
-                PlacementMode.PLANE_HORIZONTAL,
-                new Float3(0f, 0f, 0f),
-                true,
-                false
-        );
+    // -------------------------------------------------------------------------
+    // AR Fragment setup — includes session config fix for Samsung Android 16
+    // -------------------------------------------------------------------------
 
-        modelNode.loadModelGlbAsync(
-                "models/avatar.glb",
-                true,
-                0.5f,
-                null,
-                null,
-                null
-        );
+    private void setupArFragment() {
+        arFragment = (ArFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.arFragment);
 
-        arSceneView.addChild(modelNode);
+        if (arFragment == null) {
+            Toast.makeText(this, "AR Fragment not found in layout",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
 
-        btnPlaceAvatar.setOnClickListener(v -> {
-            modelNode.anchor();
-            Toast.makeText(this, "Avatar placed!", Toast.LENGTH_SHORT).show();
+        // ✅ FIX: setOnSessionConfigurationListener fires just before ARCore
+        //         creates its session — the safest place to apply Config changes.
+        //         Disabling depth + using AMBIENT_INTENSITY prevents the black
+        //         screen / FatalException on Samsung Galaxy devices with Android 16.
+        arFragment.setOnSessionConfigurationListener((session, config) -> {
+            config.setDepthMode(Config.DepthMode.DISABLED);
+            config.setLightEstimationMode(Config.LightEstimationMode.AMBIENT_INTENSITY);
+            config.setFocusMode(Config.FocusMode.AUTO);
+            config.setPlaneFindingMode(Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL);
         });
 
-        btnDeviceRouter.setOnClickListener(v -> showDeviceInfo("Router",
-                "A router is a networking device that forwards data packets between computer networks. Routers perform the traffic directing functions on the Internet."));
+        // Tap a detected plane → place avatar there
+        arFragment.setOnTapArPlaneListener((hitResult, plane, motionEvent) -> {
+            if (modelPlaced) return;
+            placeAvatarModel(hitResult.createAnchor());
+        });
+    }
 
-        btnDeviceSwitch.setOnClickListener(v -> showDeviceInfo("Switch",
-                "A network switch is networking hardware that connects devices on a computer network by using packet switching to receive and forward data to the destination device."));
+    // -------------------------------------------------------------------------
+    // Place avatar model at the tapped AR anchor
+    // -------------------------------------------------------------------------
 
-        btnDeviceHub.setOnClickListener(v -> showDeviceInfo("Hub",
-                "A network hub is a node that broadcasts data to every computer or Ethernet-based device connected to it. It is less intelligent than a switch."));
+    private void placeAvatarModel(Anchor anchor) {
+        ModelRenderable.builder()
+                .setSource(this, Uri.parse("models/avatar.glb"))
+                .setIsFilamentGltf(true)
+                .setAsyncLoadEnabled(true)
+                .build()
+                .thenAccept(renderable -> {
+                    addToScene(anchor, renderable);
+                    modelPlaced = true;
+                    runOnUiThread(() ->
+                            Toast.makeText(this, "Avatar placed!",
+                                    Toast.LENGTH_SHORT).show());
+                })
+                .exceptionally(throwable -> {
+                    Log.e(TAG, "Avatar load failed", throwable);
+                    runOnUiThread(() ->
+                            Toast.makeText(this,
+                                    "Error loading avatar: " + throwable.getMessage(),
+                                    Toast.LENGTH_LONG).show());
+                    return null;
+                });
+    }
 
-        btnDeviceAccessPoint.setOnClickListener(v -> showDeviceInfo("Access Point",
-                "A wireless access point (WAP) is a networking hardware device that allows other Wi-Fi devices to connect to a wired network."));
+    private void addToScene(Anchor anchor, ModelRenderable renderable) {
+        ArSceneView sceneView = arFragment.getArSceneView();
 
-        btnDeviceModem.setOnClickListener(v -> showDeviceInfo("Modem",
-                "A modem (modulator-demodulator) is a device that converts signals from one form to another, allowing computers to communicate over telephone lines or cable systems."));
+        if (anchorNode != null) anchorNode.setParent(null);
+
+        anchorNode = new AnchorNode(anchor);
+        anchorNode.setParent(sceneView.getScene());
+
+        TransformableNode node = new TransformableNode(
+                arFragment.getTransformationSystem());
+        node.setParent(anchorNode);
+        node.setRenderable(renderable);
+        node.select();
+    }
+
+    // -------------------------------------------------------------------------
+    // Buttons
+    // -------------------------------------------------------------------------
+
+    private void setupButtons() {
+
+        btnPlaceAvatar.setOnClickListener(v -> {
+            if (!modelPlaced) {
+                Toast.makeText(this,
+                        "Tap a flat surface on screen to place the avatar.",
+                        Toast.LENGTH_SHORT).show();
+            } else {
+                // Allow repositioning
+                modelPlaced = false;
+                Toast.makeText(this,
+                        "Tap a surface to reposition the avatar.",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnDeviceRouter.setOnClickListener(v ->
+                showDeviceInfo("Router",
+                        "A router forwards data packets between networks "
+                                + "using IP addresses. It operates at Layer 3 of the OSI model."));
+
+        btnDeviceSwitch.setOnClickListener(v ->
+                showDeviceInfo("Switch",
+                        "A switch connects LAN devices using MAC addresses. "
+                                + "It operates at Layer 2 of the OSI model."));
 
         btnBack.setOnClickListener(v -> finish());
     }
+
+    // -------------------------------------------------------------------------
+    // Device info panel
+    // -------------------------------------------------------------------------
 
     private void showDeviceInfo(String title, String explanation) {
         tvDeviceTitle.setText(title);

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html, body { width:100%; height:100%; overflow:hidden; background:transparent; }
+        canvas { display:block; background:transparent; }
+        #status {
+          position:fixed; bottom:12px; left:0; right:0;
+          text-align:center; color:#7EDCFF;
+          font:14px system-ui; pointer-events:none;
+          text-shadow:0 1px 6px #000;
+        }
+    </style>
+</head>
+<body>
+<div id="status">⏳ Loading Three.js...</div>
+
+<!-- Three.js (local) -->
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+
+<script>
+    // =========================================================================
+    // Scene setup — called once Three.js is ready
+    // =========================================================================
+    var renderer, scene, camera, pivot, loader;
+    var rotX = 0, rotY = 0, zoom = 3;
+    var autoRotate = true;
+    var prevX = 0, prevY = 0, pinchDist = null;
+
+    function initScene() {
+      renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);   // fully transparent
+      document.body.appendChild(renderer.domElement);
+
+      scene  = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(
+          45, window.innerWidth / window.innerHeight, 0.01, 100);
+      camera.position.set(0, 0.5, zoom);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+      var key = new THREE.DirectionalLight(0xffffff, 1.0);
+      key.position.set(2, 4, 3); scene.add(key);
+      var fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
+      fill.position.set(-3, 0, -2); scene.add(fill);
+
+      pivot = new THREE.Group();
+      scene.add(pivot);
+
+      loader = new THREE.GLTFLoader();
+
+      addTouchListeners();
+      animate();
+
+      setStatus('Waiting for model...');
+      if (window.AndroidBridge) AndroidBridge.log('Scene ready');
+    }
+
+    // =========================================================================
+    // loadGlbFromBridge — pulls base64 data from Java in ~75 KB chunks,
+    // assembles an ArrayBuffer, then parses with GLTFLoader.parse().
+    // Avoids all URL loading (no file://, no XHR) so it works on every Android.
+    // =========================================================================
+    window.loadGlbFromBridge = function() {
+      if (!window.AndroidBridge) { showFallback('Device'); return; }
+
+      var total = AndroidBridge.getGlbLength();
+      if (total === 0) { showFallback('Device'); return; }
+
+      setStatus('Loading model...');
+      var chunks = [];
+      var offset = 0;
+
+      function fetchNext() {
+        if (offset >= total) {
+          // All chunks received — decode base64 → ArrayBuffer
+          setStatus('Parsing model...');
+          var b64    = chunks.join('');
+          var binary = atob(b64);
+          var buf    = new ArrayBuffer(binary.length);
+          var view   = new Uint8Array(buf);
+          for (var i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i);
+          chunks = null;
+
+          loader.parse(buf, '',
+            function(gltf) {
+              while (pivot.children.length) pivot.remove(pivot.children[0]);
+              var model = gltf.scene;
+              var box   = new THREE.Box3().setFromObject(model);
+              var ctr   = box.getCenter(new THREE.Vector3());
+              var size  = box.getSize(new THREE.Vector3());
+              var sc    = 2.0 / Math.max(size.x, size.y, size.z);
+              model.scale.setScalar(sc);
+              model.position.sub(ctr.multiplyScalar(sc));
+              pivot.add(model);
+              setStatus('Drag to rotate  •  Pinch to zoom');
+              if (window.AndroidBridge) AndroidBridge.onModelLoaded('device');
+            },
+            function(err) {
+              if (window.AndroidBridge) AndroidBridge.onModelError(err ? (err.message || 'parse error') : 'parse error');
+              showFallback('Device');
+            }
+          );
+          return;
+        }
+
+        var chunk = AndroidBridge.getGlbChunk(offset);
+        if (!chunk || chunk.length === 0) { showFallback('Device'); return; }
+        chunks.push(chunk);
+        offset += chunk.length;
+        setStatus('Loading... ' + Math.round(offset / total * 100) + '%');
+        setTimeout(fetchNext, 0); // yield so UI stays responsive
+      }
+
+      fetchNext();
+    };
+
+    // Legacy entry kept for compatibility (not used in new flow)
+    window.loadGlb = function(dataUrl) {
+      setStatus('Loading 3D model...');
+      loader.load(dataUrl,
+        function(gltf) {
+          while (pivot.children.length) pivot.remove(pivot.children[0]);
+          var model = gltf.scene;
+          var box  = new THREE.Box3().setFromObject(model);
+          var ctr  = box.getCenter(new THREE.Vector3());
+          var size = box.getSize(new THREE.Vector3());
+          var sc   = 2.0 / Math.max(size.x, size.y, size.z);
+          model.scale.setScalar(sc);
+          model.position.sub(ctr.multiplyScalar(sc));
+          pivot.add(model);
+          setStatus('Drag to rotate  •  Pinch to zoom');
+          if (window.AndroidBridge) AndroidBridge.onModelLoaded('device');
+        },
+        null,
+        function(err) {
+          if (window.AndroidBridge) AndroidBridge.onModelError(err ? (err.message || 'load failed') : 'load failed');
+          showFallback('Device');
+        }
+      );
+    };
+
+    // =========================================================================
+    // showFallback — called when no GLB available
+    // =========================================================================
+    window.showFallback = function(name) {
+      while (pivot.children.length) pivot.remove(pivot.children[0]);
+
+      var g = new THREE.Group();
+      g.add(new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 0.4, 1.1),
+        new THREE.MeshPhongMaterial({color:0x4A67F5})
+      ));
+      [-0.5,0,0.5].forEach(function(x){
+        var a = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03,0.03,0.7,8),
+          new THREE.MeshPhongMaterial({color:0x333333})
+        );
+        a.position.set(x, 0.55, -0.3);
+        g.add(a);
+      });
+      var led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06,8,8),
+        new THREE.MeshBasicMaterial({color:0x00ff44})
+      );
+      led.position.set(0.6, 0.1, 0.58);
+      g.add(led);
+      pivot.add(g);
+
+      setStatus((name||'Device') + ' — add .glb to assets/models/ for real model');
+    };
+
+    // =========================================================================
+    // resetCamera — called from btnPlace
+    // =========================================================================
+    window.resetCamera = function() {
+      rotX = 0; rotY = 0; zoom = 3;
+      autoRotate = true;
+    };
+
+    // =========================================================================
+    // Touch controls
+    // =========================================================================
+    function addTouchListeners() {
+      var el = renderer.domElement;
+
+      el.addEventListener('touchstart', function(e) {
+        autoRotate = false;
+        if (e.touches.length === 1) {
+          prevX = e.touches[0].clientX;
+          prevY = e.touches[0].clientY;
+        }
+        if (e.touches.length === 2) {
+          pinchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+        }
+      }, {passive:true});
+
+      el.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1) {
+          rotY += (e.touches[0].clientX - prevX) * 0.4;
+          rotX += (e.touches[0].clientY - prevY) * 0.4;
+          prevX = e.touches[0].clientX;
+          prevY = e.touches[0].clientY;
+        }
+        if (e.touches.length === 2 && pinchDist) {
+          var d = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          zoom *= pinchDist / d;
+          zoom  = Math.max(0.5, Math.min(zoom, 8));
+          pinchDist = d;
+        }
+      }, {passive:true});
+
+      el.addEventListener('touchend',  function() { pinchDist = null; }, {passive:true});
+    }
+
+    // =========================================================================
+    // Render loop
+    // =========================================================================
+    function animate() {
+      requestAnimationFrame(animate);
+      if (autoRotate) rotY += 0.5;
+      pivot.rotation.x = THREE.MathUtils.degToRad(rotX);
+      pivot.rotation.y = THREE.MathUtils.degToRad(rotY);
+      camera.position.z = zoom;
+      renderer.render(scene, camera);
+    }
+
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+    }
+
+    // =========================================================================
+    // Start — wait for Three.js scripts to load
+    // =========================================================================
+    window.addEventListener('load', function() {
+      var attempts = 0;
+      function tryInit() {
+        if (typeof THREE !== 'undefined' && THREE.GLTFLoader) {
+          initScene();
+        } else if (attempts++ < 20) {
+          setTimeout(tryInit, 300);
+        } else {
+          setStatus('Failed to load Three.js — check internet connection');
+        }
+      }
+      tryInit();
+    });
+
+    window.addEventListener('resize', function() {
+      if (!renderer) return;
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>

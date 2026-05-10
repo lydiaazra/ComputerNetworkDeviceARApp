@@ -23,9 +23,9 @@ public class MainMenuActivity extends AppCompatActivity {
         btnAvatar = findViewById(R.id.btnAvatar);
         btnExit = findViewById(R.id.btnExit);
 
-        // AR Button - goes to Device Display
+        // AR Button - goes to AR Camera
         btnAR.setOnClickListener(v -> {
-            Intent intent = new Intent(MainMenuActivity.this, DeviceDisplay.class);
+            Intent intent = new Intent(MainMenuActivity.this, CameraARActivity.class);
             intent.putExtra("deviceName", "Router");
             startActivity(intent);
         });
@@ -41,6 +41,9 @@ public class MainMenuActivity extends AppCompatActivity {
             Intent intent = new Intent(MainMenuActivity.this, AvatarActivity.class);
             startActivity(intent);
         });
+
+        findViewById(R.id.btnTestAR).setOnClickListener(v ->
+                startActivity(new Intent(this, CameraARActivity.class)));
 
         // Exit Button - logout and close app
         btnExit.setOnClickListener(v -> {

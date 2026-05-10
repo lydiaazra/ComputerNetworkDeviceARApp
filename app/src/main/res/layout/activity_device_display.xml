@@ -5,10 +5,19 @@
     android:layout_height="match_parent"
     android:background="#081120">
 
-    <io.github.sceneview.ar.ArSceneView
-        android:id="@+id/arSceneView"
+    <!--
+        ✅ FIXED: Replaced io.github.sceneview.ar.ArSceneView
+                  with com.google.ar.sceneform.ux.ArFragment
+                  (gorisse.thomas.sceneform — Java compatible)
+    -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/arFragment"
+        android:name="com.google.ar.sceneform.ux.ArFragment"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        />
+
+
 
     <!-- Top info card -->
     <LinearLayout
@@ -37,13 +46,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="A router connects multiple networks and forwards data packets between them."
+            android:lineSpacingExtra="3dp"
+            android:text="A router connects multiple networks and forwards data packets."
             android:textColor="#D7E5F6"
-            android:textSize="14sp"
-            android:lineSpacingExtra="3dp" />
+            android:textSize="14sp" />
+
     </LinearLayout>
 
-    <!-- Assistant panel -->
+    <!-- Bottom assistant panel -->
     <LinearLayout
         android:id="@+id/assistantPanel"
         android:layout_width="match_parent"
@@ -54,63 +64,60 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!--
+            NOTE: avatarSceneView removed — gorisse.thomas.sceneform does not
+            expose a standalone SceneView for non-AR panels.
+            Replace with an ImageView showing a static avatar image,
+            or use a Lottie animation for a talking avatar effect.
+        -->
+
+        <!-- Assistant reply area -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="top"
-            android:orientation="horizontal">
-
-            <FrameLayout
-                android:layout_width="96dp"
-                android:layout_height="110dp"
-                android:background="@drawable/bg_info_card"
-                android:padding="6dp">
-
-                <io.github.sceneview.SceneView
-                    android:id="@+id/avatarSceneView"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </FrameLayout>
+            android:orientation="vertical">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
 
                 <TextView
                     android:id="@+id/tvAssistantName"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="AI Assistant"
                     android:textColor="#FFFFFF"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvAssistantStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="Ask me about this device"
+                    android:text="Ready"
                     android:textColor="#7EDCFF"
                     android:textSize="12sp" />
 
-                <TextView
-                    android:id="@+id/tvAssistantReply"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:background="@drawable/bg_info_card"
-                    android:padding="12dp"
-                    android:text="Hello, I can explain this device and answer your networking questions."
-                    android:textColor="#FFFFFF"
-                    android:textSize="14sp"
-                    android:lineSpacingExtra="3dp" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvAssistantReply"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_info_card"
+                android:lineSpacingExtra="3dp"
+                android:padding="12dp"
+                android:text="Hello, I can explain this device and answer your networking questions."
+                android:textColor="#FFFFFF"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
+        <!-- Question input -->
         <EditText
             android:id="@+id/etAssistantQuestion"
             android:layout_width="match_parent"
@@ -118,11 +125,13 @@
             android:layout_marginTop="14dp"
             android:background="@drawable/edit_text_modern_bg"
             android:hint="Ask something about this device..."
+            android:inputType="text"
             android:paddingStart="14dp"
             android:paddingEnd="14dp"
             android:textColor="#FFFFFF"
             android:textColorHint="#8FA5C3" />
 
+        <!-- Action buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -163,8 +172,10 @@
                 android:textColor="#FFFFFF"
                 app:backgroundTint="#14C7E3"
                 app:cornerRadius="14dp" />
+
         </LinearLayout>
 
+        <!-- Back button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBack"
             android:layout_width="130dp"

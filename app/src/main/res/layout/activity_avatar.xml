@@ -2,108 +2,129 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="#081120">
 
-    <io.github.sceneview.ar.ArSceneView
-        android:id="@+id/arSceneView"
+    <!--
+        ✅ ArFragment handles AR camera, permissions, plane detection automatically.
+           Replace the old ArSceneView with this fragment declaration.
+    -->
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/arFragment"
+        android:name="com.google.ar.sceneform.ux.ArFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Top info card -->
     <LinearLayout
-        android:id="@+id/topControls"
-        android:layout_width="match_parent"
+        android:id="@+id/topPanel"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_info_card"
+        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="12dp"
-        android:background="#CC0A0E2A">
+        android:padding="14dp">
 
         <TextView
             android:id="@+id/tvDeviceTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Avatar Assistant"
+            android:text="📡 Select a device"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
-            android:textStyle="bold"
-            android:paddingBottom="8dp" />
-
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <Button
-                    android:id="@+id/btnDeviceRouter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Router"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/btnDeviceSwitch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Switch"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/btnDeviceHub"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hub"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/btnDeviceAccessPoint"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Access Point"
-                    android:layout_marginEnd="8dp" />
-
-                <Button
-                    android:id="@+id/btnDeviceModem"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Modem" />
-            </LinearLayout>
-        </HorizontalScrollView>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:background="#CC0A0E2A">
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tvExplanation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:text="Tap on the floor to place the Avatar Assistant"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:layout_marginTop="8dp"
+            android:text="Tap a button below to learn about a device."
+            android:textColor="#D7E5F6"
+            android:textSize="13sp"
+            android:lineSpacingExtra="3dp" />
 
-        <Button
-            android:id="@+id/btnPlaceAvatar"
+    </LinearLayout>
+
+    <!-- Bottom button panel -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:background="#E5081120"
+        android:elevation="12dp"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Device selection row -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Place Avatar"
-            android:layout_marginBottom="8dp" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
 
-        <Button
-            android:id="@+id/btnBack"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeviceRouter"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:text="Router"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#1A4F8A"
+                app:cornerRadius="12dp"
+                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDeviceSwitch"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:text="Switch"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#1A4F8A"
+                app:cornerRadius="12dp"
+                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+        </LinearLayout>
+
+        <!-- Place + Back row -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Back to Menu" />
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPlaceAvatar"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:text="Place Avatar"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#1E9E49"
+                app:cornerRadius="12dp"
+                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBack"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:text="Back"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#C73D5A"
+                app:cornerRadius="12dp"
+                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+
+        </LinearLayout>
+
     </LinearLayout>
 
 </RelativeLayout>
