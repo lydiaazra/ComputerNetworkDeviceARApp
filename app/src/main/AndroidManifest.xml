@@ -64,6 +64,8 @@
         <activity android:name=".CameraARActivity"
             android:exported="false"
             android:screenOrientation="portrait"/>
+
+        <activity android:name=".DeviceSelectActivity" android:exported="false"/>
     </application>
 
 </manifest>
