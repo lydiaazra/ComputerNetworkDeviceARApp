@@ -32,7 +32,7 @@ import java.util.Locale;
 public class DeviceDisplay extends AppCompatActivity implements TextToSpeech.OnInitListener {
 
     private static final String TAG         = "DeviceDisplay";
-    private static final String BACKEND_URL = "http://192.168.159.1:3000/inworld-chat";
+    private static final String BACKEND_URL = "http://10.204.99.34:3000/inworld-chat";
 
     // AR
     private ArFragment arFragment;

@@ -1,130 +1,159 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#081120">
 
-    <!--
-        ✅ ArFragment handles AR camera, permissions, plane detection automatically.
-           Replace the old ArSceneView with this fragment declaration.
-    -->
-    <androidx.fragment.app.FragmentContainerView
-        android:id="@+id/arFragment"
-        android:name="com.google.ar.sceneform.ux.ArFragment"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+    <!-- Layer 1: Camera background -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraPreview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:scaleType="fillCenter"/>
 
-    <!-- Top info card -->
-    <LinearLayout
-        android:id="@+id/topPanel"
-        android:layout_width="300dp"
+    <!-- Layer 2: Avaturn 3D avatar — left half, transparent WebView -->
+    <WebView
+        android:id="@+id/avatarWebView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomPanel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/guideline"/>
+
+    <!-- Vertical guideline at 45% — avatar takes left, info takes right -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="16dp"
-        android:background="@drawable/bg_info_card"
-        android:elevation="8dp"
         android:orientation="vertical"
-        android:padding="14dp">
+        app:layout_constraintGuide_percent="0.45"/>
+
+    <!-- Layer 3: Device/topic info — right side -->
+    <LinearLayout
+        android:id="@+id/infoPanel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#CC081120"
+        android:padding="12dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@id/guideline"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <TextView
-            android:id="@+id/tvDeviceTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📡 Select a device"
+            android:text="AI Avatar Assistant"
             android:textColor="#FFFFFF"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textSize="14sp"
+            android:textStyle="bold"/>
 
         <TextView
-            android:id="@+id/tvExplanation"
+            android:id="@+id/tvAssistantStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Tap a button below to learn about a device."
-            android:textColor="#D7E5F6"
-            android:textSize="13sp"
-            android:lineSpacingExtra="3dp" />
+            android:layout_marginTop="4dp"
+            android:text="Loading avatar..."
+            android:textColor="#7EDCFF"
+            android:textSize="11sp"/>
 
     </LinearLayout>
 
-    <!-- Bottom button panel -->
-    <LinearLayout
-        android:layout_width="match_parent"
+    <!-- Layer 3: Assistant reply bubble — right side, below info -->
+    <TextView
+        android:id="@+id/tvAssistantReply"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:background="#E5081120"
-        android:elevation="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginStart="4dp"
+        android:background="@drawable/bg_info_card"
+        android:padding="10dp"
+        android:text="Hello! Ask me anything about computer networking."
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:lineSpacingExtra="2dp"
+        app:layout_constraintTop_toBottomOf="@id/infoPanel"
+        app:layout_constraintStart_toEndOf="@id/guideline"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Bottom panel -->
+    <LinearLayout
+        android:id="@+id/bottomPanel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:background="#CC081120"
+        android:padding="14dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Device selection row -->
+        <EditText
+            android:id="@+id/etAssistantQuestion"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:background="@drawable/edit_text_modern_bg"
+            android:hint="Ask a networking question..."
+            android:inputType="text"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#8FA5C3"
+            android:textSize="13sp"/>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="12dp">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeviceRouter"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:text="Router"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                app:backgroundTint="#1A4F8A"
-                app:cornerRadius="12dp"
-                xmlns:app="http://schemas.android.com/apk/res-auto"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeviceSwitch"
-                android:layout_width="0dp"
-                android:layout_height="46dp"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:text="Switch"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                app:backgroundTint="#1A4F8A"
-                app:cornerRadius="12dp"
-                xmlns:app="http://schemas.android.com/apk/res-auto"/>
-
-        </LinearLayout>
-
-        <!-- Place + Back row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnPlaceAvatar"
+                android:id="@+id/btnAskAssistant"
                 android:layout_width="0dp"
-                android:layout_height="46dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
-                android:text="Place Avatar"
+                android:text="Ask"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
-                app:backgroundTint="#1E9E49"
-                app:cornerRadius="12dp"
-                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+                app:backgroundTint="#4A67F5"
+                app:cornerRadius="12dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSpeakReply"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="Speak"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#14C7E3"
+                app:cornerRadius="12dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
                 android:layout_width="0dp"
-                android:layout_height="46dp"
+                android:layout_height="44dp"
                 android:layout_weight="1"
-                android:layout_marginStart="10dp"
+                android:layout_marginStart="8dp"
                 android:text="Back"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 app:backgroundTint="#C73D5A"
-                app:cornerRadius="12dp"
-                xmlns:app="http://schemas.android.com/apk/res-auto"/>
+                app:cornerRadius="12dp"/>
 
         </LinearLayout>
-
     </LinearLayout>
 
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
