@@ -2,10 +2,12 @@ package com.example.computernetworkdevicearapp;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import android.util.Base64;
@@ -43,6 +45,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
@@ -51,13 +54,14 @@ public class AvatarActivity extends AppCompatActivity
 
     private static final String TAG                   = "AvatarActivity";
     private static final int    CAMERA_PERMISSION_CODE = 400;
+    private static final int    SPEECH_REQUEST_CODE    = 500; // ✅ speech-to-text
     private static final String BACKEND_URL = "http://10.204.99.34:3000/inworld-chat";
 
     private PreviewView    cameraPreview;
     private WebView        avatarWebView;
     private TextView       tvAssistantStatus, tvAssistantReply;
     private EditText       etQuestion;
-    private MaterialButton btnAsk, btnSpeak, btnBack;
+    private MaterialButton btnAsk, btnSpeak, btnBack, btnMic; // ✅ btnMic added
 
     private TextToSpeech tts;
     private boolean      ttsReady = false;
@@ -83,7 +87,7 @@ public class AvatarActivity extends AppCompatActivity
         setupAvatarWebView();
         setupButtons();
         setupTTS();
-        handleKeyboard(); // ✅ keyboard handler
+        handleKeyboard();
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -103,6 +107,23 @@ public class AvatarActivity extends AppCompatActivity
                 && results.length > 0
                 && results[0] == PackageManager.PERMISSION_GRANTED) {
             startCamera();
+        }
+    }
+
+    // ✅ Receive speech-to-text result
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SPEECH_REQUEST_CODE
+                && resultCode == RESULT_OK
+                && data != null) {
+            ArrayList<String> results =
+                    data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+            if (results != null && !results.isEmpty()) {
+                // Put spoken text into question box
+                etQuestion.setText(results.get(0));
+                etQuestion.setSelection(etQuestion.getText().length());
+            }
         }
     }
 
@@ -126,10 +147,11 @@ public class AvatarActivity extends AppCompatActivity
         btnAsk            = findViewById(R.id.btnAskAssistant);
         btnSpeak          = findViewById(R.id.btnSpeakReply);
         btnBack           = findViewById(R.id.btnBack);
+        btnMic            = findViewById(R.id.btnSpeakQuestion); // ✅ mic button
     }
 
     // -------------------------------------------------------------------------
-    // Keyboard handler — moves bottom panel up when keyboard opens
+    // Keyboard handler
     // -------------------------------------------------------------------------
 
     private void handleKeyboard() {
@@ -137,15 +159,12 @@ public class AvatarActivity extends AppCompatActivity
         rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
             Rect r = new Rect();
             rootView.getWindowVisibleDisplayFrame(r);
-            int screenHeight  = rootView.getRootView().getHeight();
-            int keypadHeight  = screenHeight - r.bottom;
+            int screenHeight = rootView.getRootView().getHeight();
+            int keypadHeight = screenHeight - r.bottom;
             LinearLayout bottomPanel = findViewById(R.id.bottomPanel);
-
             if (keypadHeight > screenHeight * 0.15) {
-                // Keyboard is open — slide bottom panel up
                 bottomPanel.setTranslationY(-keypadHeight);
             } else {
-                // Keyboard is closed — reset
                 bottomPanel.setTranslationY(0);
             }
         });
@@ -232,32 +251,16 @@ public class AvatarActivity extends AppCompatActivity
                 threeScript + loaderScript +
                 "<script>" +
 
-                "var renderer,scene,camera,mixer,clock,morphMeshes=[];" +
-                "var isTalking=false;" +
-
-                "var VISEMES={" +
-                "  'A':['viseme_aa','viseme_E','viseme_I']," +
-                "  'E':['viseme_E','viseme_I']," +
-                "  'I':['viseme_I','viseme_aa']," +
-                "  'O':['viseme_O','viseme_U']," +
-                "  'U':['viseme_U','viseme_O']," +
-                "  'M':['viseme_PP']," +
-                "  'B':['viseme_PP']," +
-                "  'P':['viseme_PP']," +
-                "  'F':['viseme_FF']," +
-                "  'V':['viseme_FF']," +
-                "  'T':['viseme_DD']," +
-                "  'D':['viseme_DD']," +
-                "  'K':['viseme_kk']," +
-                "  'G':['viseme_kk']," +
-                "  'CH':['viseme_CH']," +
-                "  'SH':['viseme_CH']," +
-                "  'TH':['viseme_TH']," +
-                "  'SS':['viseme_SS']," +
-                "  'NN':['viseme_nn']," +
-                "  'RR':['viseme_RR']," +
-                "  '_':['viseme_sil']" +
-                "};" +
+                "var renderer,scene,camera,clock,mixer=null;" +
+                "var avatarModel=null;" +
+                "var morphMeshes=[];" +
+                "var idleAction=null,talkAction=null;" +
+                "var isTalking=false,talkInterval=null;" +
+                "var headBone=null,jawBone=null;" +
+                "var leftArmBone=null,rightArmBone=null;" +
+                "var leftHandBone=null,rightHandBone=null;" +
+                "var mouthMorphIndices=[];" +
+                "var mouthMesh=null;" +
 
                 "function initScene(){" +
                 "  clock=new THREE.Clock();" +
@@ -283,60 +286,101 @@ public class AvatarActivity extends AppCompatActivity
                 "  setStatus('Loading avatar...');" +
                 "  new THREE.GLTFLoader().load(url," +
                 "    function(gltf){" +
-                "      var model=gltf.scene;" +
-                "      scene.add(model);" +
-                "      morphMeshes=[];" +
-                "      model.traverse(function(node){" +
-                "        if(node.isMesh&&node.morphTargetDictionary){" +
+                "      avatarModel=gltf.scene;" +
+                "      scene.add(avatarModel);" +
+                "      var boneNames=[];" +
+                "      avatarModel.traverse(function(node){" +
+                "        var n=(node.name||'').toLowerCase();" +
+                "        boneNames.push(node.name);" +
+                "        if(!headBone&&n.includes('head'))headBone=node;" +
+                "        if(!jawBone&&n.includes('jaw'))jawBone=node;" +
+                "        if(!leftHandBone&&(n.includes('lefthand')||n.includes('hand_l')||n.includes('l_hand')))leftHandBone=node;" +
+                "        if(!rightHandBone&&(n.includes('righthand')||n.includes('hand_r')||n.includes('r_hand')))rightHandBone=node;" +
+                "        if(!leftArmBone&&(n.includes('leftforearm')||n.includes('forearm_l')||n.includes('lowerarm_l')))leftArmBone=node;" +
+                "        if(!rightArmBone&&(n.includes('rightforearm')||n.includes('forearm_r')||n.includes('lowerarm_r')))rightArmBone=node;" +
+                "        if(node.isMesh&&node.morphTargetDictionary&&Object.keys(node.morphTargetDictionary).length>0){" +
                 "          morphMeshes.push(node);" +
+                "          var dict=node.morphTargetDictionary;" +
+                "          var keys=Object.keys(dict);" +
+                "          var mouthKeys=keys.filter(function(k){" +
+                "            var kl=k.toLowerCase();" +
+                "            return kl.includes('jaw')||kl.includes('mouth')||" +
+                "                   kl.includes('lip')||kl.includes('viseme')||" +
+                "                   kl.includes('open')||kl.includes('aa')||" +
+                "                   kl.includes('ee')||kl.includes('oh')||" +
+                "                   kl.includes('smile')||kl.includes('talk');" +
+                "          });" +
+                "          if(mouthKeys.length>0&&!mouthMesh){" +
+                "            mouthMesh=node;" +
+                "            mouthMorphIndices=mouthKeys.map(function(k){return dict[k];});" +
+                "            if(window.AndroidBridge)AndroidBridge.log('Mouth morphs: '+mouthKeys.join(','));" +
+                "          }" +
+                "          if(window.AndroidBridge)AndroidBridge.log('Mesh '+node.name+' morphs: '+keys.join(','));" +
                 "        }" +
                 "      });" +
-                "      if(gltf.animations&&gltf.animations.length){" +
-                "        mixer=new THREE.AnimationMixer(model);" +
-                "        var idle=gltf.animations.find(function(a){" +
-                "          return a.name.toLowerCase().includes('idle');" +
-                "        })||gltf.animations[0];" +
-                "        mixer.clipAction(idle).play();" +
+                "      if(window.AndroidBridge){" +
+                "        AndroidBridge.log('Head: '+(headBone?headBone.name:'none'));" +
+                "        AndroidBridge.log('Jaw: '+(jawBone?jawBone.name:'none'));" +
+                "        AndroidBridge.log('LeftHand: '+(leftHandBone?leftHandBone.name:'none'));" +
+                "        AndroidBridge.log('RightHand: '+(rightHandBone?rightHandBone.name:'none'));" +
+                "      }" +
+                "      var anims=gltf.animations||[];" +
+                "      if(anims.length){" +
+                "        mixer=new THREE.AnimationMixer(avatarModel);" +
+                "        var idleClip=anims.find(function(a){return a.name.toLowerCase().includes('idle');})||anims[0];" +
+                "        idleAction=mixer.clipAction(idleClip);" +
+                "        idleAction.play();" +
+                "        var talkClip=anims.find(function(a){" +
+                "          var nm=a.name.toLowerCase();" +
+                "          return nm.includes('talk')||nm.includes('speak');" +
+                "        });" +
+                "        if(talkClip){talkAction=mixer.clipAction(talkClip);talkAction.setLoop(THREE.LoopRepeat,Infinity);}" +
+                "        if(window.AndroidBridge)AndroidBridge.log('Anims: '+anims.map(function(a){return a.name;}).join(','));" +
                 "      }" +
                 "      setStatus('');" +
                 "      if(window.AndroidBridge)AndroidBridge.onAvatarLoaded();" +
                 "    }," +
                 "    function(x){if(x.total)setStatus('Loading '+(x.loaded/x.total*100|0)+'%');}," +
-                "    function(e){setStatus('Avatar load error');}" +
+                "    function(e){setStatus('Avatar load error: '+e.message);}" +
                 "  );" +
                 "};" +
 
-                "function setMorph(name,value){" +
-                "  morphMeshes.forEach(function(mesh){" +
-                "    var idx=mesh.morphTargetDictionary[name];" +
-                "    if(idx!==undefined)mesh.morphTargetInfluences[idx]=value;" +
-                "  });" +
-                "}" +
-
-                "function resetMorphs(){" +
-                "  Object.values(VISEMES).forEach(function(names){" +
-                "    names.forEach(function(n){setMorph(n,0);});" +
-                "  });" +
-                "}" +
-
-                "var talkInterval=null;" +
                 "window.startTalking=function(){" +
                 "  isTalking=true;" +
-                "  var keys=Object.keys(VISEMES);" +
-                "  var i=0;" +
+                "  if(talkAction&&idleAction){idleAction.fadeOut(0.2);talkAction.reset().fadeIn(0.2).play();}" +
+                "  var phase=0;" +
                 "  talkInterval=setInterval(function(){" +
-                "    resetMorphs();" +
-                "    var group=VISEMES[keys[i%keys.length]];" +
-                "    group.forEach(function(n){setMorph(n,0.7+Math.random()*0.3);});" +
-                "    i++;" +
-                "  },120);" +
+                "    phase++;" +
+                "    var t=phase*0.12;" +
+                "    if(mouthMesh&&mouthMorphIndices.length>0){" +
+                "      var jawVal=Math.max(0,0.5*Math.abs(Math.sin(t*3.0))+0.2*Math.random());" +
+                "      mouthMorphIndices.forEach(function(idx,i){" +
+                "        var offset=i*0.7;" +
+                "        mouthMesh.morphTargetInfluences[idx]=Math.max(0,0.6*Math.abs(Math.sin(t*2.5+offset))*jawVal);" +
+                "      });" +
+                "    }" +
+                "    if(jawBone){jawBone.rotation.x=0.15*Math.abs(Math.sin(t*3.0));}" +
+                "    if(headBone){headBone.rotation.x=0.06*Math.sin(t*1.2);headBone.rotation.y=0.05*Math.sin(t*0.8);}" +
+                "    if(leftHandBone){leftHandBone.rotation.z=0.1*Math.sin(t*1.5);leftHandBone.rotation.x=0.08*Math.sin(t*1.1+1.0);}" +
+                "    if(rightHandBone){rightHandBone.rotation.z=-0.1*Math.sin(t*1.5+0.5);rightHandBone.rotation.x=0.08*Math.sin(t*1.1);}" +
+                "    if(leftArmBone){leftArmBone.rotation.z=0.05*Math.sin(t*0.9+0.3);}" +
+                "    if(rightArmBone){rightArmBone.rotation.z=-0.05*Math.sin(t*0.9);}" +
+                "    if(avatarModel){avatarModel.rotation.y=0.025*Math.sin(t*0.5);avatarModel.position.y=0.008*Math.sin(t*0.9);}" +
+                "  },80);" +
                 "};" +
 
                 "window.stopTalking=function(){" +
                 "  isTalking=false;" +
                 "  if(talkInterval){clearInterval(talkInterval);talkInterval=null;}" +
-                "  resetMorphs();" +
-                "  setMorph('viseme_sil',1.0);" +
+                "  if(talkAction&&idleAction){talkAction.fadeOut(0.3);idleAction.reset().fadeIn(0.3).play();}" +
+                "  if(mouthMesh&&mouthMorphIndices.length>0){mouthMorphIndices.forEach(function(idx){mouthMesh.morphTargetInfluences[idx]=0;});}" +
+                "  if(jawBone){jawBone.rotation.x=0;}" +
+                "  if(headBone){headBone.rotation.x=0;headBone.rotation.y=0;}" +
+                "  if(leftHandBone){leftHandBone.rotation.z=0;leftHandBone.rotation.x=0;}" +
+                "  if(rightHandBone){rightHandBone.rotation.z=0;rightHandBone.rotation.x=0;}" +
+                "  if(leftArmBone){leftArmBone.rotation.z=0;}" +
+                "  if(rightArmBone){rightArmBone.rotation.z=0;}" +
+                "  if(avatarModel){avatarModel.rotation.y=0;avatarModel.position.y=0;}" +
                 "};" +
 
                 "function animate(){" +
@@ -346,9 +390,7 @@ public class AvatarActivity extends AppCompatActivity
                 "  if(renderer&&scene&&camera)renderer.render(scene,camera);" +
                 "}" +
 
-                "function setStatus(m){" +
-                "  document.getElementById('status').textContent=m;" +
-                "}" +
+                "function setStatus(m){document.getElementById('status').textContent=m;}" +
 
                 "window.addEventListener('load',function(){" +
                 "  var t=0;" +
@@ -373,6 +415,8 @@ public class AvatarActivity extends AppCompatActivity
     // -------------------------------------------------------------------------
 
     private void setupButtons() {
+
+        // Ask — send typed/spoken question to AI
         btnAsk.setOnClickListener(v -> {
             String q = etQuestion.getText().toString().trim();
             if (q.isEmpty()) {
@@ -385,6 +429,7 @@ public class AvatarActivity extends AppCompatActivity
             askAssistant(q);
         });
 
+        // Speak — avatar speaks the AI reply
         btnSpeak.setOnClickListener(v -> {
             String reply = tvAssistantReply.getText().toString().trim();
             if (reply.isEmpty()) {
@@ -400,7 +445,23 @@ public class AvatarActivity extends AppCompatActivity
             speakWithAvatar(reply);
         });
 
+        // Back
         btnBack.setOnClickListener(v -> finish());
+
+        // ✅ Mic — speech-to-text, result goes into question box
+        btnMic.setOnClickListener(v -> {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak your question...");
+            try {
+                startActivityForResult(intent, SPEECH_REQUEST_CODE);
+            } catch (Exception e) {
+                Toast.makeText(this, "Speech recognition not available",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // -------------------------------------------------------------------------

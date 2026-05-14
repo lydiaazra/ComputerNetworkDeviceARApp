@@ -6,10 +6,6 @@
     android:layout_height="match_parent"
     android:background="#081120">
 
-    <!-- ✅ Makes layout scroll up when keyboard appears -->
-    <!-- Add this to AndroidManifest.xml for this activity:
-         android:windowSoftInputMode="adjustResize" -->
-
     <!-- Layer 1: Camera background -->
     <androidx.camera.view.PreviewView
         android:id="@+id/cameraPreview"
@@ -73,7 +69,7 @@
 
     </LinearLayout>
 
-    <!-- Reply bubble — right side, scrollable -->
+    <!-- Reply bubble — scrollable -->
     <ScrollView
         android:id="@+id/replyScroll"
         android:layout_width="0dp"
@@ -93,14 +89,14 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_info_card"
             android:padding="10dp"
-            android:text="Hello! Ask me anything about computer networking."
+            android:text="Hello! Ask me anything"
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:lineSpacingExtra="2dp"/>
 
     </ScrollView>
 
-    <!-- ✅ Bottom panel — constrained to bottom, pushes up with keyboard -->
+    <!-- Bottom panel -->
     <LinearLayout
         android:id="@+id/bottomPanel"
         android:layout_width="0dp"
@@ -112,20 +108,46 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <EditText
-            android:id="@+id/etAssistantQuestion"
+        <!-- Input row: EditText + Mic button -->
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="46dp"
-            android:background="@drawable/edit_text_modern_bg"
-            android:hint="Ask a networking question..."
-            android:inputType="text"
-            android:imeOptions="actionSend"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:textColor="#FFFFFF"
-            android:textColorHint="#8FA5C3"
-            android:textSize="13sp"/>
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
+            <EditText
+                android:id="@+id/etAssistantQuestion"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@drawable/edit_text_modern_bg"
+                android:hint="Ask a networking question..."
+                android:inputType="text"
+                android:imeOptions="actionSend"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:textColor="#FFFFFF"
+                android:textColorHint="#8FA5C3"
+                android:textSize="13sp"/>
+
+            <!-- ✅ Mic button — speaks the typed question -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSpeakQuestion"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:text="🎤"
+                android:textSize="18sp"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                app:backgroundTint="#1E9E49"
+                app:cornerRadius="12dp"/>
+
+        </LinearLayout>
+
+        <!-- Action buttons row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -149,7 +171,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="Speak"
+                android:text="Speak Reply"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 app:backgroundTint="#14C7E3"
