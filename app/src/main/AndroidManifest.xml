@@ -52,8 +52,12 @@
         <!-- AR Quiz Screen -->
         <activity android:name=".ARQuizActivity"/>
 
-        <!-- Avatar Screen -->
-        <activity android:name=".AvatarActivity"/>
+        <!-- Avatar Screen -!>
+       <!- Change adjustResize to adjustPan -->
+        <activity
+            android:name=".AvatarActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan"/>
 
         <!-- Result Screen Screen -->
         <activity android:name=".ResultActivity"/>

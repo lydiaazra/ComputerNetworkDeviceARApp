@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
@@ -15,6 +16,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -81,6 +83,7 @@ public class AvatarActivity extends AppCompatActivity
         setupAvatarWebView();
         setupButtons();
         setupTTS();
+        handleKeyboard(); // ✅ keyboard handler
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -123,6 +126,29 @@ public class AvatarActivity extends AppCompatActivity
         btnAsk            = findViewById(R.id.btnAskAssistant);
         btnSpeak          = findViewById(R.id.btnSpeakReply);
         btnBack           = findViewById(R.id.btnBack);
+    }
+
+    // -------------------------------------------------------------------------
+    // Keyboard handler — moves bottom panel up when keyboard opens
+    // -------------------------------------------------------------------------
+
+    private void handleKeyboard() {
+        View rootView = findViewById(android.R.id.content);
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            Rect r = new Rect();
+            rootView.getWindowVisibleDisplayFrame(r);
+            int screenHeight  = rootView.getRootView().getHeight();
+            int keypadHeight  = screenHeight - r.bottom;
+            LinearLayout bottomPanel = findViewById(R.id.bottomPanel);
+
+            if (keypadHeight > screenHeight * 0.15) {
+                // Keyboard is open — slide bottom panel up
+                bottomPanel.setTranslationY(-keypadHeight);
+            } else {
+                // Keyboard is closed — reset
+                bottomPanel.setTranslationY(0);
+            }
+        });
     }
 
     // -------------------------------------------------------------------------
@@ -181,7 +207,7 @@ public class AvatarActivity extends AppCompatActivity
     }
 
     // -------------------------------------------------------------------------
-    // Build avatar HTML — fixed: no // comments inside Java strings
+    // Build avatar HTML
     // -------------------------------------------------------------------------
 
     private String buildAvatarHtml() {
