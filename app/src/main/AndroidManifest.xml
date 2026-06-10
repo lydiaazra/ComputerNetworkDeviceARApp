@@ -52,7 +52,9 @@
         <activity android:name=".QuizLevelActivity"/>
 
         <!-- AR Quiz Screen -->
-        <activity android:name=".ARQuizActivity"/>
+        <activity android:name=".ARQuizActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan"/>/>
 
         <!-- Avatar Screen -!>
        <!- Change adjustResize to adjustPan -->
@@ -78,6 +80,8 @@
             android:name=".NetworkLabActivity"
             android:exported="false"
             android:screenOrientation="portrait"/>
+
+
     </application>
 
 </manifest>
