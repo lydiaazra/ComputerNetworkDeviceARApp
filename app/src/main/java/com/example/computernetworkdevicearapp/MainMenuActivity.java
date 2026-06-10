@@ -35,9 +35,9 @@ public class MainMenuActivity extends AppCompatActivity {
         btnAvatar.setOnClickListener(v ->
                 startActivity(new Intent(this, AvatarActivity.class)));
 
-        // ✅ Test AR button — also opens device selection
-        findViewById(R.id.btnTestAR).setOnClickListener(v ->
-                startActivity(new Intent(this, DeviceSelectActivity.class)));
+        // Add a Network Lab button to your menu
+        findViewById(R.id.btnNetworkLab).setOnClickListener(v ->
+                startActivity(new Intent(this, NetworkLabActivity.class)));
 
         // Exit Button — logout and close app
         btnExit.setOnClickListener(v -> {

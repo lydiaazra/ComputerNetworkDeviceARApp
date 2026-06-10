@@ -1,120 +1,477 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_main_gradient"
-    android:padding="24dp">
-
-    <View
-        android:id="@+id/topGlow"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_glow_circle" />
-
-    <ImageView
-        android:id="@+id/imgQuizIcon"
-        android:layout_width="84dp"
-        android:layout_height="84dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="38dp"
-        android:src="@mipmap/ic_launcher"
-        android:scaleType="fitCenter" />
-
-    <TextView
-        android:id="@+id/tvQuizTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/imgQuizIcon"
-        android:layout_marginTop="18dp"
-        android:text="Select Quiz Level"
-        android:textAlignment="center"
-        android:textColor="#FFFFFF"
-        android:textSize="28sp"
-        android:textStyle="bold" />
-
-    <TextView
-        android:id="@+id/tvQuizSubtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/tvQuizTitle"
-        android:layout_marginTop="8dp"
-        android:text="Choose a level to test your understanding of computer network devices"
-        android:textAlignment="center"
-        android:textColor="#B7C9E6"
-        android:textSize="14sp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp" />
+    android:background="#0D1117"
+    android:fillViewport="true">
 
     <LinearLayout
-        android:id="@+id/quizCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tvQuizSubtitle"
-        android:layout_marginTop="28dp"
         android:orientation="vertical"
-        android:gravity="center_horizontal"
-        android:background="@drawable/bg_info_card"
         android:padding="20dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnEasy"
-            android:layout_width="200dp"
-            android:layout_height="46dp"
-            android:layout_gravity="center_horizontal"
-            android:text="Easy"
-            android:textAllCaps="false"
+        <!-- Header -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quiz Progress"
             android:textColor="#FFFFFF"
-            android:textSize="13sp"
+            android:textSize="28sp"
             android:textStyle="bold"
-            app:backgroundTint="#4A67F5"
-            app:cornerRadius="14dp" />
+            android:layout_marginTop="16dp"/>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnIntermediate"
-            android:layout_width="200dp"
-            android:layout_height="46dp"
-            android:layout_marginTop="10dp"
-            android:layout_gravity="center_horizontal"
-            android:text="Intermediate"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Complete levels to unlock the next challenge"
+            android:textColor="#8FA5C3"
             android:textSize="13sp"
-            android:textStyle="bold"
-            app:backgroundTint="#4A67F5"
-            app:cornerRadius="14dp" />
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp"/>
 
+        <!-- ===== EASY CARD ===== -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardEasy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#0D1F2D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <!-- Top row: icon + title + score -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+
+                    <!-- Icon circle -->
+                    <FrameLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_marginEnd="14dp">
+                        <View
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:background="@drawable/bg_circle_green"/>
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="🎓"
+                            android:textSize="22sp"
+                            android:gravity="center"/>
+                    </FrameLayout>
+
+                    <!-- Title + subtitle -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="EASY LEVEL"
+                            android:textColor="#00C853"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Build your basics"
+                            android:textColor="#8FA5C3"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <!-- Best score badge -->
+                    <LinearLayout
+                        android:id="@+id/badgeEasy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_score_badge"
+                        android:padding="8dp"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🏆 Best Score"
+                            android:textColor="#8FA5C3"
+                            android:textSize="9sp"/>
+                        <TextView
+                            android:id="@+id/tvEasyBestScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 / 10"
+                            android:textColor="#00C853"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Progress row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Progress"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"/>
+                    <TextView
+                        android:id="@+id/tvEasyProgress"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0 / 10"
+                        android:textColor="#00C853"
+                        android:textSize="13sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/progressEasy"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:max="10"
+                    android:progress="0"
+                    android:progressTint="#00C853"
+                    android:progressBackgroundTint="#1A2744"
+                    android:layout_marginBottom="14dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEasy"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="Start"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#00C853"
+                    app:cornerRadius="12dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- ===== INTERMEDIATE CARD ===== -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardIntermediate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1F1A0D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+
+                    <FrameLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_marginEnd="14dp">
+                        <View
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:background="@drawable/bg_circle_orange"/>
+                        <TextView
+                            android:id="@+id/tvIntermediateIcon"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="🔒"
+                            android:textSize="22sp"
+                            android:gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="INTERMEDIATE LEVEL"
+                            android:textColor="#FFB300"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Test your knowledge"
+                            android:textColor="#8FA5C3"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_score_badge"
+                        android:padding="8dp"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🏆 Best Score"
+                            android:textColor="#8FA5C3"
+                            android:textSize="9sp"/>
+                        <TextView
+                            android:id="@+id/tvIntermediateBestScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 / 10"
+                            android:textColor="#FFB300"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Lock requirement -->
+                <LinearLayout
+                    android:id="@+id/lockRequirementIntermediate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_lock_requirement"
+                    android:padding="10dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="10dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔒"
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Complete Easy Level to unlock"
+                        android:textColor="#B7C9E6"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnIntermediate"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="🔒  Locked"
+                    android:textAllCaps="false"
+                    android:textColor="#8FA5C3"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#1A2030"
+                    app:cornerRadius="12dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- ===== ADVANCED CARD ===== -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardAdvanced"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="#1F0D0D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="14dp">
+
+                    <FrameLayout
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_marginEnd="14dp">
+                        <View
+                            android:layout_width="52dp"
+                            android:layout_height="52dp"
+                            android:background="@drawable/bg_circle_red"/>
+                        <TextView
+                            android:id="@+id/tvAdvancedIcon"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="🔒"
+                            android:textSize="22sp"
+                            android:gravity="center"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="ADVANCED LEVEL"
+                            android:textColor="#F44336"
+                            android:textSize="15sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Challenge your limits"
+                            android:textColor="#8FA5C3"
+                            android:textSize="12sp"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_score_badge"
+                        android:padding="8dp"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🏆 Best Score"
+                            android:textColor="#8FA5C3"
+                            android:textSize="9sp"/>
+                        <TextView
+                            android:id="@+id/tvAdvancedBestScore"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 / 10"
+                            android:textColor="#F44336"
+                            android:textSize="13sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/lockRequirementAdvanced"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_lock_requirement"
+                    android:padding="10dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="10dp">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="🔒"
+                        android:textSize="16sp"
+                        android:layout_marginEnd="8dp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Complete Intermediate Level to unlock"
+                        android:textColor="#B7C9E6"
+                        android:textSize="13sp"/>
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAdvanced"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="🔒  Locked"
+                    android:textAllCaps="false"
+                    android:textColor="#8FA5C3"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="#1A2030"
+                    app:cornerRadius="12dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Info card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            app:cardCornerRadius="14dp"
+            app:cardBackgroundColor="#0E1B35"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="14dp"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:text="📋"
+                    android:textSize="22sp"
+                    android:gravity="center"
+                    android:background="@drawable/bg_icon_blue"
+                    android:layout_marginEnd="12dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Each level has 10 questions.\nYou must pass a level to unlock the next one."
+                    android:textColor="#B7C9E6"
+                    android:textSize="12sp"
+                    android:lineSpacingExtra="3dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ℹ️"
+                    android:textSize="20sp"
+                    android:layout_marginStart="8dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Back button -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnAdvanced"
-            android:layout_width="200dp"
-            android:layout_height="46dp"
-            android:layout_marginTop="10dp"
-            android:layout_gravity="center_horizontal"
-            android:text="Advanced"
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="8dp"
+            android:text="Back"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            app:backgroundTint="#4A67F5"
-            app:cornerRadius="14dp" />
+            android:textSize="15sp"
+            app:backgroundTint="#C73D5A"
+            app:cornerRadius="14dp"/>
 
     </LinearLayout>
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnBack"
-        android:layout_width="140dp"
-        android:layout_height="44dp"
-        android:layout_alignParentBottom="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="24dp"
-        android:text="Back"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="13sp"
-        android:textStyle="bold"
-        app:backgroundTint="#4A67F5"
-        app:cornerRadius="14dp" />
-
-</RelativeLayout>
+</ScrollView>

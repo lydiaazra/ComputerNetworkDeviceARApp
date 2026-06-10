@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Network Lab</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+        body{background:#F0F4F8;font-family:system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+        .topbar{background:#1A2744;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+        .topbar-title{color:#fff;font-size:13px;font-weight:600}
+        .topbar-btns{display:flex;gap:6px}
+        .tb-btn{padding:5px 12px;border-radius:6px;border:none;font-size:11px;cursor:pointer;font-weight:500}
+        .tb-btn.demo{background:#4A67F5;color:#fff}
+        .tb-btn.clear{background:#C73D5A;color:#fff}
+        .tb-btn.back{background:#1E3060;color:#7EDCFF;border:1px solid #2A4080}
+        .toolbar{display:flex;gap:4px;padding:8px 10px;background:#fff;border-bottom:1px solid #E0E8F0;flex-shrink:0;overflow-x:auto;align-items:center}
+        .tb-label{font-size:10px;color:#8FA5C3;margin-right:4px;white-space:nowrap;font-weight:500}
+        .dev-chip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 8px;border:1px solid #E0E8F0;border-radius:8px;background:#F8FAFC;cursor:pointer;min-width:56px;flex-shrink:0;position:relative}
+        .dev-chip canvas{display:block;border-radius:4px}
+        .dev-chip span{font-size:9px;color:#4A67A0;font-weight:500}
+        .dev-chip:active{background:#EBF0FA;border-color:#4A67F5}
+        .loading-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#FFA030;display:none}
+        .canvas-wrap{flex:1;position:relative;overflow:hidden}
+        #netCanvas{width:100%;height:100%;display:block;background:#F8FAFC;touch-action:none}
+        .info-panel{background:#fff;border-top:1px solid #E0E8F0;padding:10px 14px;min-height:76px;flex-shrink:0}
+        .info-row{display:flex;align-items:flex-start;gap:10px}
+        .info-icon-wrap{width:48px;height:48px;flex-shrink:0;border-radius:8px;overflow:hidden;background:#F0F4F8;border:1px solid #E0E8F0;display:flex;align-items:center;justify-content:center}
+        .info-icon-wrap canvas{display:block}
+        .info-content{flex:1}
+        .info-title{font-size:12px;font-weight:600;color:#1A2744;margin-bottom:2px}
+        .info-body{font-size:11px;color:#5A7090;line-height:1.5}
+        .info-tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
+        .tag{font-size:10px;padding:2px 7px;border-radius:12px;background:#EBF0FA;color:#4A67F5;border:1px solid #C8D8F0}
+        .tag.green{background:#E8F5EE;color:#1E7A40;border-color:#A8D8B8}
+        .tag.orange{background:#FFF3E8;color:#B56010;border-color:#F0C888}
+        .tag.red{background:#FDE8EC;color:#A02030;border-color:#F0A8B0}
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-title" id="diagramTitle">Network Diagram</div>
+    <div class="topbar-btns">
+        <button class="tb-btn demo" onclick="loadDemo()">Demo</button>
+        <button class="tb-btn clear" onclick="clearAll()">Clear</button>
+        <button class="tb-btn back" onclick="doBack()">Back</button>
+    </div>
+</div>
+
+<div class="toolbar">
+    <span class="tb-label">DEVICES</span>
+    <div class="dev-chip" onclick="addDeviceCenter('router')">
+        <canvas width="40" height="40" id="chip-router"></canvas>
+        <span>Router</span><div class="loading-badge" id="badge-router"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('switch')">
+        <canvas width="40" height="40" id="chip-switch"></canvas>
+        <span>Switch</span><div class="loading-badge" id="badge-switch"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('hub')">
+        <canvas width="40" height="40" id="chip-hub"></canvas>
+        <span>Hub</span><div class="loading-badge" id="badge-hub"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('firewall')">
+        <canvas width="40" height="40" id="chip-firewall"></canvas>
+        <span>Firewall</span><div class="loading-badge" id="badge-firewall"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('pc')">
+        <canvas width="40" height="40" id="chip-pc"></canvas>
+        <span>PC</span><div class="loading-badge" id="badge-pc"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('laptop')">
+        <canvas width="40" height="40" id="chip-laptop"></canvas>
+        <span>Laptop</span><div class="loading-badge" id="badge-laptop"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('ap')">
+        <canvas width="40" height="40" id="chip-ap"></canvas>
+        <span>AP</span><div class="loading-badge" id="badge-ap"></div>
+    </div>
+    <div class="dev-chip" onclick="addDeviceCenter('server')">
+        <canvas width="40" height="40" id="chip-server"></canvas>
+        <span>Server</span><div class="loading-badge" id="badge-server"></div>
+    </div>
+</div>
+
+<div class="canvas-wrap">
+    <canvas id="netCanvas"></canvas>
+</div>
+
+<div class="info-panel" id="infoPanel">
+    <div class="info-row">
+        <div class="info-icon-wrap">
+            <canvas id="infoIcon" width="48" height="48"></canvas>
+        </div>
+        <div class="info-content">
+            <div class="info-title" id="infoTitle">Network Lab</div>
+            <div class="info-body" id="infoBody">Tap a device to select it. Tap another to connect. Drag to move. Long-press to delete.</div>
+            <div class="info-tags" id="infoTags"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Three.js loaded from local assets (same folder as this HTML) -->
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+
+<script>
+    // ─── Device definitions (fallback drawn icons + metadata) ─────────────────
+    const DEFS = {
+      router:   {label:'Router',       osi:'Layer 3', color:'#185FA5', desc:'Routes IP packets between different networks using routing tables.', cable:'Gigabit Ethernet / Fiber', tags:[{t:'Layer 3',c:''},{t:'IP Routing',c:''},{t:'WAN',c:''}], drawFallback: drawRouter},
+      switch:   {label:'Switch',       osi:'Layer 2', color:'#3B6D11', desc:'Forwards frames to correct ports using MAC address table.', cable:'Cat5e / Cat6 Ethernet', tags:[{t:'Layer 2',c:''},{t:'MAC Table',c:''},{t:'LAN',c:'green'}], drawFallback: drawSwitch},
+      hub:      {label:'Hub',          osi:'Layer 1', color:'#854F0B', desc:'Broadcasts all incoming data to every connected port.', cable:'Ethernet (shared)', tags:[{t:'Layer 1',c:'orange'},{t:'Broadcast',c:'orange'},{t:'Legacy',c:''}], drawFallback: drawHub},
+      firewall: {label:'Firewall',     osi:'L3–L7',   color:'#A32D2D', desc:'Monitors and filters traffic based on security rules.', cable:'Ethernet / Fiber', tags:[{t:'Security',c:'red'},{t:'Packet Filter',c:'red'},{t:'NAT',c:''}], drawFallback: drawFirewall},
+      pc:       {label:'PC',           osi:'Layer 7', color:'#534AB7', desc:'End device that sends and receives network data.', cable:'Ethernet / Wi-Fi', tags:[{t:'End Device',c:''},{t:'Client',c:''}], drawFallback: drawPc},
+      laptop:   {label:'Laptop',       osi:'Layer 7', color:'#534AB7', desc:'Portable end device for wireless or wired connectivity.', cable:'Wi-Fi / Ethernet', tags:[{t:'End Device',c:''},{t:'Mobile',c:''}], drawFallback: drawLaptop},
+      ap:       {label:'Access Point', osi:'Layer 2', color:'#0F6E56', desc:'Provides wireless access to wired LAN via Wi-Fi.', cable:'PoE Ethernet + Wi-Fi', tags:[{t:'Layer 2',c:''},{t:'Wi-Fi',c:'green'}], drawFallback: drawAP},
+      server:   {label:'Server',       osi:'Layer 7', color:'#185FA5', desc:'Provides services and resources to network clients.', cable:'Gigabit Ethernet / Fiber', tags:[{t:'Layer 7',c:''},{t:'Services',c:''}], drawFallback: drawServer},
+    };
+
+    // ─── GLB sprite system ────────────────────────────────────────────────────
+    const glbSprites = {};   // type → HTMLImageElement (rendered from GLB)
+    let offRenderer = null, offScene = null, offCamera = null;
+
+    function initOffscreenRenderer() {
+      if (offRenderer || typeof THREE === 'undefined') return;
+      try {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = offCanvas.height = 120;
+        offRenderer = new THREE.WebGLRenderer({canvas:offCanvas, antialias:true, alpha:true});
+        offRenderer.setClearColor(0x000000, 0);
+        offRenderer.setSize(120, 120);
+        offScene = new THREE.Scene();
+        offCamera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+        offCamera.position.set(0, 1.2, 3.5);
+        offCamera.lookAt(0, 0.8, 0);
+        offScene.add(new THREE.AmbientLight(0xffffff, 1.8));
+        const key = new THREE.DirectionalLight(0xffffff, 1.2);
+        key.position.set(2, 3, 2); offScene.add(key);
+        const fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
+        fill.position.set(-2, 0, -1); offScene.add(fill);
+        if (window.AndroidBridge) AndroidBridge.log('Offscreen renderer ready');
+      } catch(e) {
+        if (window.AndroidBridge) AndroidBridge.log('Offscreen renderer failed: ' + e.message);
+      }
+    }
+
+    // Pull GLB chunks from Java bridge, assemble, render to sprite
+    function loadGlbSprite(type) {
+      if (!window.AndroidBridge) return;
+      const total = AndroidBridge.getGlbLength(type);
+      if (total <= 0) return;
+
+      if (window.AndroidBridge) AndroidBridge.log('Loading GLB sprite: ' + type + ' (' + (total/1024|0) + ' KB)');
+
+      let base64 = '';
+      let offset = 0;
+      while (offset < total) {
+        base64 += AndroidBridge.getGlbChunk(type, offset);
+        offset += 100000;
+      }
+
+      const dataUrl = 'data:model/gltf-binary;base64,' + base64;
+      renderGlbToSprite(type, dataUrl);
+    }
+
+    function renderGlbToSprite(type, dataUrl) {
+      if (!offRenderer || !offScene || typeof THREE === 'undefined') return;
+
+      const loader = new THREE.GLTFLoader();
+      loader.load(dataUrl,
+        function(gltf) {
+          // Remove previous model from offscreen scene
+          const toRemove = [];
+          offScene.traverse(n => { if (n.isMesh || (n.isGroup && n !== offScene)) toRemove.push(n); });
+          toRemove.forEach(n => offScene.remove(n));
+
+          const model = gltf.scene;
+          const box  = new THREE.Box3().setFromObject(model);
+          const ctr  = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+          const sc   = 2.0 / Math.max(size.x, size.y, size.z);
+          model.scale.setScalar(sc);
+          model.position.sub(ctr.multiplyScalar(sc));
+
+          offScene.add(model);
+          offRenderer.render(offScene, offCamera);
+
+          // Capture to image
+          const img = new Image();
+          img.src = offRenderer.domElement.toDataURL('image/png');
+          img.onload = function() {
+            glbSprites[type] = img;
+            updateChipIcon(type);
+            draw();
+            if (window.AndroidBridge) AndroidBridge.log('Sprite ready: ' + type);
+          };
+        },
+        null,
+        function(err) {
+          if (window.AndroidBridge) AndroidBridge.log('GLB sprite error for ' + type + ': ' + err.message);
+        }
+      );
+    }
+
+    // Called by Java after page loads — triggers GLB loading for available types
+    window.notifyGlbReady = function(type) {
+      initOffscreenRenderer();
+      // Small delay between loads to avoid overwhelming the renderer
+      setTimeout(() => loadGlbSprite(type), Object.keys(glbSprites).length * 300);
+    };
+
+    // Update toolbar chip icon with GLB sprite
+    function updateChipIcon(type) {
+      const chipCanvas = document.getElementById('chip-' + type);
+      if (!chipCanvas) return;
+      const ctx = chipCanvas.getContext('2d');
+      ctx.clearRect(0, 0, 40, 40);
+      const sprite = glbSprites[type];
+      if (sprite) {
+        ctx.drawImage(sprite, 0, 0, 40, 40);
+      } else {
+        DEFS[type].drawFallback(ctx, 20, 22, 0.55);
+      }
+    }
+
+    // ─── Fallback drawn icons ──────────────────────────────────────────────────
+    function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+
+    function drawRouter(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#1E5FAD';roundRect(ctx,-18,-10,36,20,3);ctx.fill();
+      ctx.fillStyle='#3A82D4';ctx.beginPath();ctx.moveTo(-18,-10);ctx.lineTo(-12,-16);ctx.lineTo(24,-16);ctx.lineTo(18,-10);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#1248A0';ctx.beginPath();ctx.moveTo(18,-10);ctx.lineTo(24,-16);ctx.lineTo(24,4);ctx.lineTo(18,10);ctx.closePath();ctx.fill();
+      for(let i=0;i<4;i++){ctx.fillStyle='#0D3880';roundRect(ctx,-14+i*8,0,6,4,1);ctx.fill();ctx.fillStyle='#5BE0A0';ctx.beginPath();ctx.arc(-11+i*8,2,1.5,0,Math.PI*2);ctx.fill();}
+      ctx.strokeStyle='#7ECDF5';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-8,-10);ctx.lineTo(-10,-20);ctx.stroke();ctx.beginPath();ctx.moveTo(6,-10);ctx.lineTo(8,-20);ctx.stroke();
+      ctx.restore();
+    }
+    function drawSwitch(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#2A6B20';roundRect(ctx,-22,-8,44,16,3);ctx.fill();
+      ctx.fillStyle='#3D9A30';ctx.beginPath();ctx.moveTo(-22,-8);ctx.lineTo(-16,-14);ctx.lineTo(28,-14);ctx.lineTo(22,-8);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#1A5010';ctx.beginPath();ctx.moveTo(22,-8);ctx.lineTo(28,-14);ctx.lineTo(28,2);ctx.lineTo(22,8);ctx.closePath();ctx.fill();
+      for(let i=0;i<8;i++){ctx.fillStyle='#0D3208';roundRect(ctx,-18+i*5,-2,4,4,1);ctx.fill();ctx.fillStyle=i%3===0?'#FFB020':'#30F080';ctx.beginPath();ctx.arc(-16+i*5,0,1.2,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+    function drawHub(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#8B5010';roundRect(ctx,-20,-8,40,16,3);ctx.fill();
+      ctx.fillStyle='#C07020';ctx.beginPath();ctx.moveTo(-20,-8);ctx.lineTo(-14,-14);ctx.lineTo(26,-14);ctx.lineTo(20,-8);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#5A3008';ctx.beginPath();ctx.moveTo(20,-8);ctx.lineTo(26,-14);ctx.lineTo(26,2);ctx.lineTo(20,8);ctx.closePath();ctx.fill();
+      for(let i=0;i<6;i++){ctx.fillStyle='#3A1804';roundRect(ctx,-14+i*5,-2,4,4,1);ctx.fill();ctx.fillStyle='#FFD040';ctx.beginPath();ctx.arc(-12+i*5,0,1.2,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+    function drawFirewall(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#9B2828';roundRect(ctx,-12,-22,24,44,3);ctx.fill();
+      ctx.fillStyle='#C03030';roundRect(ctx,-10,-20,20,40,2);ctx.fill();
+      for(let i=0;i<4;i++){ctx.fillStyle='#7A1818';roundRect(ctx,-8,-16+i*10,16,8,2);ctx.fill();ctx.fillStyle='#F04040';ctx.beginPath();ctx.arc(4,-12+i*10,2,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle='#FFE0A0';ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(-5,-3);ctx.lineTo(-5,2);ctx.quadraticCurveTo(0,7,0,7);ctx.quadraticCurveTo(5,7,5,2);ctx.lineTo(5,-3);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    function drawPc(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#1A2060';roundRect(ctx,-16,-20,32,26,3);ctx.fill();
+      ctx.fillStyle='#4A6AE0';roundRect(ctx,-13,-17,26,19,2);ctx.fill();
+      ctx.fillStyle='#7090FF';for(let i=0;i<3;i++){roundRect(ctx,-10,-14+i*5,18,3,1);ctx.fill();}
+      ctx.fillStyle='#1A2060';roundRect(ctx,-3,6,6,6,1);ctx.fill();roundRect(ctx,-8,12,16,4,2);ctx.fill();
+      ctx.restore();
+    }
+    function drawLaptop(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#1A2060';roundRect(ctx,-16,-20,32,22,3);ctx.fill();
+      ctx.fillStyle='#4A6AE0';roundRect(ctx,-13,-17,26,16,2);ctx.fill();
+      ctx.fillStyle='#7090FF';for(let i=0;i<3;i++){roundRect(ctx,-10,-14+i*4,18,2.5,1);ctx.fill();}
+      ctx.fillStyle='#283080';ctx.beginPath();ctx.moveTo(-18,2);ctx.lineTo(18,2);ctx.lineTo(22,10);ctx.lineTo(-22,10);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#0D1540';roundRect(ctx,-18,2,36,3,1);ctx.fill();
+      ctx.restore();
+    }
+    function drawAP(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#0D6848';ctx.beginPath();ctx.ellipse(0,6,20,6,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#10A070';ctx.beginPath();ctx.ellipse(0,4,18,5,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#0D6848';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(0,4);ctx.lineTo(0,-18);ctx.stroke();
+      ctx.fillStyle='#20D090';ctx.beginPath();ctx.arc(0,-18,3.5,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#5BE0B0';ctx.lineWidth=1.5;
+      for(let r=6;r<=14;r+=4){ctx.beginPath();ctx.arc(-14,-8,r,Math.PI*1.1,Math.PI*1.9);ctx.stroke();}
+      ctx.fillStyle='#40FF80';ctx.beginPath();ctx.arc(8,4,2.5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    function drawServer(ctx,x,y,sc){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#144A8A';roundRect(ctx,-14,-22,28,44,3);ctx.fill();
+      ctx.fillStyle='#1E6AC0';roundRect(ctx,-12,-20,24,40,2);ctx.fill();
+      for(let i=0;i<5;i++){ctx.fillStyle='#0A3060';roundRect(ctx,-10,-17+i*8,20,6,1.5);ctx.fill();ctx.fillStyle='#40C0FF';ctx.beginPath();ctx.arc(6,-14+i*8,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#20FF80';ctx.beginPath();ctx.arc(10,-14+i*8,2,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+
+    // ─── Cable helpers ────────────────────────────────────────────────────────
+    function cableColor(a,b){
+      const k=[a.type,b.type].sort().join('-');
+      const M={'router-switch':'#185FA5','router-firewall':'#A32D2D','router-server':'#185FA5','router-ap':'#0F6E56','switch-pc':'#3B6D11','switch-laptop':'#3B6D11','switch-switch':'#3B6D11','switch-ap':'#0F6E56','switch-server':'#3B6D11','firewall-router':'#A32D2D','firewall-switch':'#A32D2D','hub-pc':'#854F0B','hub-laptop':'#854F0B'};
+      return M[k]||'#4A67F5';
+    }
+    function cableLabel(a,b){
+      const k=[a.type,b.type].sort().join('-');
+      const M={'router-switch':'Gigabit Ethernet','router-firewall':'Fiber / Ethernet','switch-pc':'Cat5e Ethernet','switch-laptop':'Cat5e Ethernet','switch-ap':'PoE Ethernet','hub-pc':'Ethernet (shared)','hub-laptop':'Ethernet (shared)','router-ap':'Ethernet','firewall-switch':'Ethernet (DMZ)','switch-switch':'Trunk Link'};
+      return M[k]||'Ethernet Cable';
+    }
+
+    function drawArrow(ctx,x1,y1,x2,y2,col){
+      const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
+      if(len<1)return;
+      const ux=dx/len,uy=dy/len;
+      const ax=x1+ux*32,ay=y1+uy*32,bx=x2-ux*32,by=y2-uy*32;
+      ctx.save();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+      const hl=10,hw=5;
+      // Arrow at B
+      const ex=bx-ux*hl,ey=by-uy*hl;
+      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ex-uy*hw,ey+ux*hw);ctx.lineTo(ex+uy*hw,ey-ux*hw);ctx.closePath();ctx.fill();
+      // Arrow at A
+      const ex2=ax+ux*hl,ey2=ay+uy*hl;
+      ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(ex2-uy*hw,ey2+ux*hw);ctx.lineTo(ex2+uy*hw,ey2-ux*hw);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+
+    // ─── State ────────────────────────────────────────────────────────────────
+    const canvas=document.getElementById('netCanvas');
+    const ctx=canvas.getContext('2d');
+    let devices=[],cables=[],packets=[];
+    let selected=null,nextId=1;
+    let dragging=null,dragOx=0,dragOy=0,dragMoved=false;
+    let longTimer=null,hoveredCable=null;
+
+    function resize(){canvas.width=canvas.offsetWidth;canvas.height=canvas.offsetHeight;draw();}
+
+    // ─── Main draw ────────────────────────────────────────────────────────────
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // Grid
+      ctx.fillStyle='rgba(100,140,200,0.12)';
+      for(let x=20;x<canvas.width;x+=30)for(let y=20;y<canvas.height;y+=30){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+
+      // Cables
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);
+        if(!a||!b)return;
+        const col=cableColor(a,b);
+        const isHov=hoveredCable===c;
+        ctx.globalAlpha=isHov?1:0.7;
+        drawArrow(ctx,a.x,a.y,b.x,b.y,col);
+        if(isHov){
+          const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+          const lbl=cableLabel(a,b);
+          ctx.font='bold 10px system-ui';
+          const tw=ctx.measureText(lbl).width;
+          ctx.globalAlpha=1;
+          ctx.fillStyle='rgba(255,255,255,0.95)';
+          roundRect(ctx,mx-tw/2-6,my-15,tw+12,18,4);ctx.fill();
+          ctx.strokeStyle=col;ctx.lineWidth=1;ctx.stroke();
+          ctx.fillStyle=col;ctx.textAlign='center';ctx.textBaseline='middle';
+          ctx.fillText(lbl,mx,my-6);
+        }
+        ctx.globalAlpha=1;
+      });
+
+      // Packets
+      packets.forEach(p=>{
+        const a=devices.find(d=>d.id===p.from),b=devices.find(d=>d.id===p.to);
+        if(!a||!b)return;
+        const px=a.x+(b.x-a.x)*p.progress,py=a.y+(b.y-a.y)*p.progress;
+        ctx.beginPath();ctx.arc(px,py,4,0,Math.PI*2);ctx.fillStyle=p.color;ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.lineWidth=1.5;ctx.stroke();
+      });
+
+      // Devices
+      devices.forEach(d=>{
+        const def=DEFS[d.type];
+        const isSel=selected&&selected.id===d.id;
+        const sprite=glbSprites[d.type];
+
+        if(isSel){
+          ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=2.5;ctx.setLineDash([5,3]);
+          ctx.beginPath();ctx.arc(d.x,d.y,36,0,Math.PI*2);ctx.stroke();
+          ctx.setLineDash([]);ctx.restore();
+        }
+
+        ctx.save();
+        ctx.shadowColor='rgba(0,0,0,0.18)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+
+        if(sprite){
+          // Draw GLB sprite
+          const size=56;
+          ctx.drawImage(sprite,d.x-size/2,d.y-size/2,size,size);
+        } else {
+          // Draw fallback icon
+          def.drawFallback(ctx,d.x,d.y,1);
+        }
+        ctx.restore();
+
+        // Label
+        const lbl=def.label;
+        ctx.font='bold 10px system-ui';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(255,255,255,0.92)';
+        roundRect(ctx,d.x-tw/2-5,d.y+30,tw+10,16,3);ctx.fill();
+        ctx.strokeStyle=isSel?def.color:'#C8D8F0';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=isSel?def.color:'#1A2744';
+        ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(lbl,d.x,d.y+38);
+      });
+    }
+
+    // Packet animation
+    function animLoop(){
+      let moved=false;
+      packets.forEach(p=>{p.progress+=0.012;if(p.progress>1)p.progress=0;moved=true;});
+      if(moved)draw();
+      requestAnimationFrame(animLoop);
+    }
+    animLoop();
+
+    function spawnPackets(){
+      packets=[];
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);
+        if(!a||!b)return;
+        const col=cableColor(a,b);
+        packets.push({from:c.a,to:c.b,progress:Math.random(),color:col});
+        packets.push({from:c.b,to:c.a,progress:Math.random()+0.5,color:col});
+      });
+    }
+
+    // ─── Interaction ──────────────────────────────────────────────────────────
+    function canvasPos(e){const r=canvas.getBoundingClientRect();const s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function hitDevice(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<34);}
+    function hitCable(x,y){
+      for(const c of cables){
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);
+        if(!a||!b)continue;
+        const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);
+        if(len<1)continue;
+        const t=((x-a.x)*dx+(y-a.y)*dy)/(len*len);
+        if(t<0.15||t>0.85)continue;
+        const px=a.x+t*dx,py=a.y+t*dy;
+        if(Math.hypot(x-px,y-py)<12)return c;
+      }return null;
+    }
+
+    function onDown(e){
+      const{x,y}=canvasPos(e);dragMoved=false;
+      const d=hitDevice(x,y);
+      if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved)deleteDevice(d);},700);}
+    }
+    function onMove(e){
+      e.preventDefault();
+      const{x,y}=canvasPos(e);
+      const hc=hitCable(x,y);
+      if(hc!==hoveredCable){hoveredCable=hc;draw();}
+      if(!dragging)return;
+      if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;
+      dragging.x=x-dragOx;dragging.y=y-dragOy;draw();
+    }
+    function onUp(e){
+      clearTimeout(longTimer);
+      if(dragging&&!dragMoved){const{x,y}=canvasPos(e);handleTap(x,y);}
+      dragging=null;dragMoved=false;
+    }
+    canvas.addEventListener('mousedown',onDown);
+    canvas.addEventListener('mousemove',onMove);
+    canvas.addEventListener('mouseup',onUp);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+    function handleTap(x,y){
+      const cable=hitCable(x,y);
+      if(cable){
+        hoveredCable=cable;selected=null;
+        const a=devices.find(d=>d.id===cable.a),b=devices.find(d=>d.id===cable.b);
+        setInfo(null,'🔗 '+cableLabel(a,b),'Connects '+DEFS[a.type].label+' ↔ '+DEFS[b.type].label+'. Bidirectional data flow.',[{t:'Bidirectional',c:'green'},{t:DEFS[a.type].osi+' to '+DEFS[b.type].osi,c:''}]);
+        draw();return;
+      }
+      hoveredCable=null;
+      const d=hitDevice(x,y);
+      if(d){
+        if(selected&&selected.id!==d.id){connectDevices(selected,d);selected=null;}
+        else{selected=d;showDeviceInfo(d);}
+      } else {selected=null;resetInfo();}
+      draw();
+    }
+
+    function connectDevices(a,b){
+      const ex=cables.find(c=>(c.a===a.id&&c.b===b.id)||(c.b===a.id&&c.a===b.id));
+      if(!ex){cables.push({a:a.id,b:b.id});spawnPackets();setInfo(null,'Connected: '+DEFS[a.type].label+' ↔ '+DEFS[b.type].label,cableLabel(a,b)+' — packets flowing.',[{t:'Connected',c:'green'},{t:cableLabel(a,b),c:''}]);}
+      draw();
+    }
+
+    function deleteDevice(d){
+      devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);
+      packets=packets.filter(p=>p.from!==d.id&&p.to!==d.id);
+      if(selected&&selected.id===d.id)selected=null;
+      spawnPackets();resetInfo();draw();
+    }
+
+    function addDeviceCenter(type){
+      const cx=canvas.width/2+(Math.random()-0.5)*80;
+      const cy=canvas.height/2+(Math.random()-0.5)*60;
+      devices.push({id:nextId++,type,x:cx,y:cy});draw();
+    }
+
+    // ─── Info panel ───────────────────────────────────────────────────────────
+    function setInfo(type,title,body,tags){
+      document.getElementById('infoTitle').textContent=title;
+      document.getElementById('infoBody').textContent=body;
+      const tc=document.getElementById('infoTags');tc.innerHTML='';
+      (tags||[]).forEach(t=>{const s=document.createElement('span');s.className='tag '+(t.c||'');s.textContent=t.t;tc.appendChild(s);});
+      const ic=document.getElementById('infoIcon');
+      const ictx=ic.getContext('2d');ictx.clearRect(0,0,48,48);
+      if(type){
+        const sprite=glbSprites[type];
+        if(sprite){ictx.drawImage(sprite,0,0,48,48);}
+        else if(DEFS[type]){DEFS[type].drawFallback(ictx,24,26,0.65);}
+      }
+    }
+    function showDeviceInfo(d){
+      const def=DEFS[d.type];
+      setInfo(d.type,def.label+' — '+def.osi,def.desc+' Cable: '+def.cable,def.tags);
+    }
+    function resetInfo(){setInfo(null,'Network Lab','Tap device to select. Tap two devices to connect. Long-press to delete. Drag to move.',[]);}
+
+    // ─── Toolbar chip fallback icons ──────────────────────────────────────────
+    function drawAllChips(){
+      Object.keys(DEFS).forEach(type=>{
+        const c=document.getElementById('chip-'+type);if(!c)return;
+        const ctx2=c.getContext('2d');ctx2.clearRect(0,0,40,40);
+        const sprite=glbSprites[type];
+        if(sprite){ctx2.drawImage(sprite,0,0,40,40);}
+        else{DEFS[type].drawFallback(ctx2,20,22,0.55);}
+      });
+    }
+
+    // ─── Demo ─────────────────────────────────────────────────────────────────
+    function loadDemo(){
+      clearAll();
+      const W=canvas.width,H=canvas.height;
+      devices=[
+        {id:nextId++,type:'firewall',x:W*.50,y:H*.10},
+        {id:nextId++,type:'router',  x:W*.50,y:H*.30},
+        {id:nextId++,type:'switch',  x:W*.25,y:H*.55},
+        {id:nextId++,type:'switch',  x:W*.75,y:H*.55},
+        {id:nextId++,type:'ap',      x:W*.50,y:H*.55},
+        {id:nextId++,type:'pc',      x:W*.10,y:H*.82},
+        {id:nextId++,type:'laptop',  x:W*.38,y:H*.82},
+        {id:nextId++,type:'pc',      x:W*.62,y:H*.82},
+        {id:nextId++,type:'pc',      x:W*.90,y:H*.82},
+      ];
+      const ids=devices.map(d=>d.id);
+      cables=[
+        {a:ids[0],b:ids[1]},{a:ids[1],b:ids[2]},{a:ids[1],b:ids[3]},{a:ids[1],b:ids[4]},
+        {a:ids[2],b:ids[5]},{a:ids[2],b:ids[6]},{a:ids[3],b:ids[7]},{a:ids[3],b:ids[8]},
+      ];
+      spawnPackets();
+      document.getElementById('diagramTitle').textContent='Router-Based Star Topology';
+      setInfo(null,'Star Topology Network','Firewall → Router → 2 Switches + AP → PCs & Laptops. Tap any device or cable.',[{t:'Packets flowing',c:'green'},{t:'Star topology',c:''}]);
+      draw();
+    }
+
+    function clearAll(){
+      devices=[];cables=[];packets=[];selected=null;hoveredCable=null;
+      document.getElementById('diagramTitle').textContent='Network Diagram';
+      resetInfo();draw();
+    }
+
+    function doBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
+
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+    window.addEventListener('resize',resize);
+    resize();
+    drawAllChips();
+    loadDemo();
+</script>
+</body>
+</html>

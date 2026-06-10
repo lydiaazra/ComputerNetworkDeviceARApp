@@ -19,6 +19,9 @@ public class DeviceSelectActivity extends AppCompatActivity {
         setupCard(R.id.cardHub,         "Hub");
         setupCard(R.id.cardFirewall,    "Firewall");
         setupCard(R.id.cardAccessPoint, "Access Point");
+        setupCard(R.id.cardNIC, "NIC");
+        setupCard(R.id.cardRepeater, "Repeater");
+        setupCard(R.id.cardGateway, "Gateway");
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
     }

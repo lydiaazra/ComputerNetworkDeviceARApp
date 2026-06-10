@@ -100,20 +100,20 @@
             app:backgroundTint="#4A67F5"
             app:cornerRadius="14dp" />
 
-        <!-- ✅ NEW: Test AR button — remove once AR is confirmed working -->
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTestAR"
+            android:id="@+id/btnNetworkLab"
             android:layout_width="150dp"
             android:layout_height="46dp"
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:text="Test AR"
+            android:text="Interactive Lab"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="13sp"
             android:textStyle="bold"
-            app:backgroundTint="#1E9E49"
+            app:backgroundTint="#4A67F5"
             app:cornerRadius="14dp" />
+
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExit"

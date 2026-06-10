@@ -17,7 +17,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:scaleType="fillCenter"/>
 
-    <!-- Layer 2: Avatar WebView — left side -->
+    <!-- Layer 2: Avatar WebView — left side, smaller -->
     <WebView
         android:id="@+id/avatarWebView"
         android:layout_width="0dp"
@@ -28,13 +28,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/guideline"/>
 
-    <!-- Vertical guideline at 45% -->
+    <!-- ✅ Guideline moved from 45% to 40% — avatar takes less space -->
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.45"/>
+        app:layout_constraintGuide_percent="0.40"/>
 
     <!-- Info panel — top right -->
     <LinearLayout
@@ -89,14 +89,14 @@
             android:layout_height="wrap_content"
             android:background="@drawable/bg_info_card"
             android:padding="10dp"
-            android:text="Hello! Ask me anything"
+            android:text="Hello! Ask me anything about computer networking."
             android:textColor="#FFFFFF"
             android:textSize="12sp"
             android:lineSpacingExtra="2dp"/>
 
     </ScrollView>
 
-    <!-- Bottom panel -->
+    <!-- ✅ Bottom panel — raised up with marginBottom -->
     <LinearLayout
         android:id="@+id/bottomPanel"
         android:layout_width="0dp"
@@ -104,6 +104,7 @@
         android:orientation="vertical"
         android:background="#EE081120"
         android:padding="12dp"
+        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -130,7 +131,7 @@
                 android:textColorHint="#8FA5C3"
                 android:textSize="13sp"/>
 
-            <!-- ✅ Mic button — speaks the typed question -->
+            <!-- Mic button — speech to text -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSpeakQuestion"
                 android:layout_width="46dp"
@@ -171,7 +172,7 @@
                 android:layout_height="42dp"
                 android:layout_weight="1"
                 android:layout_marginStart="8dp"
-                android:text="Speak Reply"
+                android:text="Speak"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 app:backgroundTint="#14C7E3"
