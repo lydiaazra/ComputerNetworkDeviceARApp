@@ -54,8 +54,13 @@ public class ARQuizActivity extends AppCompatActivity {
     private int    currentQuestionIndex = 0;
     private int    score                = 0;
     private String level;
-    private String currentGlbDevice    = ""; // track which GLB is loaded
+    private String currentGlbDevice    = "";
     private String glbBase64           = null;
+
+    // Flags to track readiness
+    private boolean isPageFinished  = false;
+    private boolean isGlbReady      = false;
+    private String  pendingDevice   = null; // device waiting to be rendered
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -150,7 +155,10 @@ public class ARQuizActivity extends AppCompatActivity {
         modelWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Will be triggered to load model after questions load
+                if (!url.startsWith("file:")) return;
+                // Page is ready — trigger model load if GLB is also ready
+                isPageFinished = true;
+                tryLoadModel();
             }
         });
 
@@ -158,20 +166,23 @@ public class ARQuizActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // Load GLB for current device in background
+    // Load GLB for current device in background — callback approach
     // -------------------------------------------------------------------------
 
     private void loadDeviceModel(String deviceName) {
         if (deviceName == null) return;
+
         // Skip if same device already loaded
-        if (deviceName.equalsIgnoreCase(currentGlbDevice)) {
-            injectGlbIntoWebView();
+        if (deviceName.equalsIgnoreCase(currentGlbDevice) && glbBase64 != null) {
+            tryLoadModel();
             return;
         }
 
-        String fileName = glbFileForDevice(deviceName);
-        currentGlbDevice = deviceName;
-        glbBase64 = null;
+        String fileName      = glbFileForDevice(deviceName);
+        currentGlbDevice     = deviceName;
+        pendingDevice        = deviceName;
+        glbBase64            = null;
+        isGlbReady           = false;
 
         new Thread(() -> {
             try {
@@ -179,30 +190,28 @@ public class ARQuizActivity extends AppCompatActivity {
                 byte[]      buf = streamToBytes(is);
                 glbBase64 = Base64.encodeToString(buf, Base64.NO_WRAP);
                 Log.d(TAG, "✅ Quiz GLB loaded: " + fileName);
-                runOnUiThread(this::injectGlbIntoWebView);
             } catch (OutOfMemoryError | IOException e) {
                 Log.w(TAG, "GLB not found or OOM: " + fileName);
                 glbBase64 = null;
-                runOnUiThread(() ->
-                        modelWebView.evaluateJavascript(
-                                "showFallback('" + deviceName + "')", null));
             }
+
+            // Callback — trigger model load immediately once GLB is ready
+            isGlbReady = true;
+            runOnUiThread(this::tryLoadModel);
+
         }).start();
     }
 
-    private void injectGlbIntoWebView() {
+    // -------------------------------------------------------------------------
+    // Try to load model — only fires when BOTH page and GLB are ready
+    // -------------------------------------------------------------------------
+
+    private void tryLoadModel() {
+        if (!isPageFinished || !isGlbReady) return; // wait for both
+
         if (glbBase64 != null) {
-            // Use polling approach to wait for bridge to be ready
-            new Thread(() -> {
-                int waited = 0;
-                while (waited < 50) {
-                    try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-                    waited++;
-                }
-                runOnUiThread(() ->
-                        modelWebView.evaluateJavascript(
-                                "setTimeout(function(){loadGlbFromBridge();},300);", null));
-            }).start();
+            modelWebView.evaluateJavascript(
+                    "setTimeout(function(){ loadGlbFromBridge(); }, 300);", null);
         } else {
             modelWebView.evaluateJavascript(
                     "showFallback('" + currentGlbDevice + "')", null);
@@ -308,7 +317,7 @@ public class ARQuizActivity extends AppCompatActivity {
         resetButtonColors();
         setButtonsEnabled(true);
 
-        // ✅ Load and display the AR model for this device
+        //Load and display the AR model for this question's device
         loadDeviceModel(deviceName);
     }
 
@@ -349,6 +358,8 @@ public class ARQuizActivity extends AppCompatActivity {
 
         new Handler().postDelayed(() -> {
             currentQuestionIndex++;
+            // Reset GLB readiness for next device model
+            isGlbReady = false;
             showQuestion();
         }, 1500);
     }

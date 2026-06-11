@@ -54,15 +54,16 @@ public class AvatarActivity extends AppCompatActivity
 
     private static final String TAG                   = "AvatarActivity";
     private static final int    CAMERA_PERMISSION_CODE = 400;
-    private static final int    SPEECH_REQUEST_CODE    = 500; // ✅ speech-to-text
-    private static final String BACKEND_URL = "http://10.204.99.34:3000/inworld-chat";
+    private static final int    SPEECH_REQUEST_CODE    = 500;
+    private static final String BACKEND_URL = "http://10.204.96.101:3000/inworld-chat";
 
     private PreviewView    cameraPreview;
     private WebView        avatarWebView;
     private TextView       tvAssistantStatus, tvAssistantReply;
     private EditText       etQuestion;
-    private MaterialButton btnAsk, btnSpeak, btnBack, btnMic; // ✅ btnMic added
+    private MaterialButton btnAsk, btnSpeak, btnBack, btnMic;
 
+    // Android TTS
     private TextToSpeech tts;
     private boolean      ttsReady = false;
 
@@ -110,7 +111,7 @@ public class AvatarActivity extends AppCompatActivity
         }
     }
 
-    // ✅ Receive speech-to-text result
+    // Receive speech-to-text result
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -120,7 +121,6 @@ public class AvatarActivity extends AppCompatActivity
             ArrayList<String> results =
                     data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
             if (results != null && !results.isEmpty()) {
-                // Put spoken text into question box
                 etQuestion.setText(results.get(0));
                 etQuestion.setSelection(etQuestion.getText().length());
             }
@@ -147,7 +147,7 @@ public class AvatarActivity extends AppCompatActivity
         btnAsk            = findViewById(R.id.btnAskAssistant);
         btnSpeak          = findViewById(R.id.btnSpeakReply);
         btnBack           = findViewById(R.id.btnBack);
-        btnMic            = findViewById(R.id.btnSpeakQuestion); // ✅ mic button
+        btnMic            = findViewById(R.id.btnSpeakQuestion);
     }
 
     // -------------------------------------------------------------------------
@@ -226,7 +226,7 @@ public class AvatarActivity extends AppCompatActivity
     }
 
     // -------------------------------------------------------------------------
-    // Build avatar HTML
+    // Build avatar HTML — Three.js rendering + procedural lip sync animation
     // -------------------------------------------------------------------------
 
     private String buildAvatarHtml() {
@@ -255,12 +255,12 @@ public class AvatarActivity extends AppCompatActivity
                 "var avatarModel=null;" +
                 "var morphMeshes=[];" +
                 "var idleAction=null,talkAction=null;" +
-                "var isTalking=false,talkInterval=null;" +
                 "var headBone=null,jawBone=null;" +
                 "var leftArmBone=null,rightArmBone=null;" +
                 "var leftHandBone=null,rightHandBone=null;" +
                 "var mouthMorphIndices=[];" +
                 "var mouthMesh=null;" +
+                "var isTalking=false,talkInterval=null;" +
 
                 "function initScene(){" +
                 "  clock=new THREE.Clock();" +
@@ -288,10 +288,8 @@ public class AvatarActivity extends AppCompatActivity
                 "    function(gltf){" +
                 "      avatarModel=gltf.scene;" +
                 "      scene.add(avatarModel);" +
-                "      var boneNames=[];" +
                 "      avatarModel.traverse(function(node){" +
                 "        var n=(node.name||'').toLowerCase();" +
-                "        boneNames.push(node.name);" +
                 "        if(!headBone&&n.includes('head'))headBone=node;" +
                 "        if(!jawBone&&n.includes('jaw'))jawBone=node;" +
                 "        if(!leftHandBone&&(n.includes('lefthand')||n.includes('hand_l')||n.includes('l_hand')))leftHandBone=node;" +
@@ -315,15 +313,8 @@ public class AvatarActivity extends AppCompatActivity
                 "            mouthMorphIndices=mouthKeys.map(function(k){return dict[k];});" +
                 "            if(window.AndroidBridge)AndroidBridge.log('Mouth morphs: '+mouthKeys.join(','));" +
                 "          }" +
-                "          if(window.AndroidBridge)AndroidBridge.log('Mesh '+node.name+' morphs: '+keys.join(','));" +
                 "        }" +
                 "      });" +
-                "      if(window.AndroidBridge){" +
-                "        AndroidBridge.log('Head: '+(headBone?headBone.name:'none'));" +
-                "        AndroidBridge.log('Jaw: '+(jawBone?jawBone.name:'none'));" +
-                "        AndroidBridge.log('LeftHand: '+(leftHandBone?leftHandBone.name:'none'));" +
-                "        AndroidBridge.log('RightHand: '+(rightHandBone?rightHandBone.name:'none'));" +
-                "      }" +
                 "      var anims=gltf.animations||[];" +
                 "      if(anims.length){" +
                 "        mixer=new THREE.AnimationMixer(avatarModel);" +
@@ -335,7 +326,6 @@ public class AvatarActivity extends AppCompatActivity
                 "          return nm.includes('talk')||nm.includes('speak');" +
                 "        });" +
                 "        if(talkClip){talkAction=mixer.clipAction(talkClip);talkAction.setLoop(THREE.LoopRepeat,Infinity);}" +
-                "        if(window.AndroidBridge)AndroidBridge.log('Anims: '+anims.map(function(a){return a.name;}).join(','));" +
                 "      }" +
                 "      setStatus('');" +
                 "      if(window.AndroidBridge)AndroidBridge.onAvatarLoaded();" +
@@ -345,6 +335,7 @@ public class AvatarActivity extends AppCompatActivity
                 "  );" +
                 "};" +
 
+                // Procedural lip sync — called from Android TTS callbacks
                 "window.startTalking=function(){" +
                 "  isTalking=true;" +
                 "  if(talkAction&&idleAction){idleAction.fadeOut(0.2);talkAction.reset().fadeIn(0.2).play();}" +
@@ -411,61 +402,7 @@ public class AvatarActivity extends AppCompatActivity
     }
 
     // -------------------------------------------------------------------------
-    // Buttons
-    // -------------------------------------------------------------------------
-
-    private void setupButtons() {
-
-        // Ask — send typed/spoken question to AI
-        btnAsk.setOnClickListener(v -> {
-            String q = etQuestion.getText().toString().trim();
-            if (q.isEmpty()) {
-                Toast.makeText(this, "Please enter a question",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            tvAssistantStatus.setText("Thinking...");
-            tvAssistantReply.setText("Please wait...");
-            askAssistant(q);
-        });
-
-        // Speak — avatar speaks the AI reply
-        btnSpeak.setOnClickListener(v -> {
-            String reply = tvAssistantReply.getText().toString().trim();
-            if (reply.isEmpty()) {
-                Toast.makeText(this, "No reply to speak yet",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (!ttsReady) {
-                Toast.makeText(this, "TTS not ready",
-                        Toast.LENGTH_SHORT).show();
-                return;
-            }
-            speakWithAvatar(reply);
-        });
-
-        // Back
-        btnBack.setOnClickListener(v -> finish());
-
-        // ✅ Mic — speech-to-text, result goes into question box
-        btnMic.setOnClickListener(v -> {
-            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
-            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak your question...");
-            try {
-                startActivityForResult(intent, SPEECH_REQUEST_CODE);
-            } catch (Exception e) {
-                Toast.makeText(this, "Speech recognition not available",
-                        Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    // -------------------------------------------------------------------------
-    // TTS + avatar lip sync
+    // TTS setup — Android TTS with lip sync callbacks
     // -------------------------------------------------------------------------
 
     private void setupTTS() {
@@ -483,12 +420,16 @@ public class AvatarActivity extends AppCompatActivity
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override
                 public void onStart(String utteranceId) {
-                    runOnUiThread(() ->
-                            avatarWebView.evaluateJavascript("startTalking()", null));
+                    // TTS started — trigger avatar lip sync animation
+                    runOnUiThread(() -> {
+                        tvAssistantStatus.setText("Speaking...");
+                        avatarWebView.evaluateJavascript("startTalking()", null);
+                    });
                 }
 
                 @Override
                 public void onDone(String utteranceId) {
+                    // TTS done — stop avatar lip sync animation
                     runOnUiThread(() -> {
                         avatarWebView.evaluateJavascript("stopTalking()", null);
                         tvAssistantStatus.setText("Ready");
@@ -505,9 +446,59 @@ public class AvatarActivity extends AppCompatActivity
     }
 
     private void speakWithAvatar(String text) {
+        if (!ttsReady) {
+            Toast.makeText(this, "TTS not ready", Toast.LENGTH_SHORT).show();
+            return;
+        }
         tvAssistantStatus.setText("Speaking...");
         android.os.Bundle params = new android.os.Bundle();
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "avatar_speech");
+    }
+
+    // -------------------------------------------------------------------------
+    // Buttons
+    // -------------------------------------------------------------------------
+
+    private void setupButtons() {
+
+        btnAsk.setOnClickListener(v -> {
+            String q = etQuestion.getText().toString().trim();
+            if (q.isEmpty()) {
+                Toast.makeText(this, "Please enter a question",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            tvAssistantStatus.setText("Thinking...");
+            tvAssistantReply.setText("Please wait...");
+            askAssistant(q);
+        });
+
+        // Speak — Android TTS speaks the reply and triggers lip sync
+        btnSpeak.setOnClickListener(v -> {
+            String reply = tvAssistantReply.getText().toString().trim();
+            if (reply.isEmpty() || reply.equals("Please wait...")) {
+                Toast.makeText(this, "No reply to speak yet",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            speakWithAvatar(reply);
+        });
+
+        btnBack.setOnClickListener(v -> finish());
+
+        btnMic.setOnClickListener(v -> {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                    RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak your question...");
+            try {
+                startActivityForResult(intent, SPEECH_REQUEST_CODE);
+            } catch (Exception e) {
+                Toast.makeText(this, "Speech recognition not available",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     // -------------------------------------------------------------------------

@@ -50,6 +50,10 @@ public class CameraARActivity extends AppCompatActivity {
     private String whyItMatters;
     private String glbBase64 = null;
 
+    // Flags to track readiness
+    private boolean isPageFinished = false;
+    private boolean isGlbReady     = false;
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -61,6 +65,9 @@ public class CameraARActivity extends AppCompatActivity {
 
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName == null || deviceName.isEmpty()) deviceName = "Router";
+
+        // Load GLB FIRST before setupDeviceData() renames deviceName
+        loadGlbInBackground();
 
         setupDeviceData();
         bindViews();
@@ -75,9 +82,6 @@ public class CameraARActivity extends AppCompatActivity {
                     new String[]{Manifest.permission.CAMERA},
                     CAMERA_PERMISSION_CODE);
         }
-
-        // ✅ Load GLB in background thread — prevents OOM crash on large files
-        loadGlbInBackground();
     }
 
     @Override
@@ -105,28 +109,28 @@ public class CameraARActivity extends AppCompatActivity {
         String name = deviceName.toLowerCase().trim();
         Log.d(TAG, "Device name received: '" + name + "'");
 
-        if (name.contains("switch"))                                return "switch.glb";
-        if (name.contains("hub"))                                   return "hub.glb";
-        if (name.contains("firewall"))                              return "firewall.glb";
+        if (name.contains("switch"))                                    return "switch.glb";
+        if (name.contains("hub"))                                       return "hub.glb";
+        if (name.contains("firewall"))                                  return "firewall.glb";
         if (name.contains("access") || name.contains("wap")
-                || name.equals("ap"))                               return "wap.glb";
+                || name.equals("ap"))                                   return "wap.glb";
         if (name.contains("nic") || name.contains("network interface")) return "nic.glb";
-        if (name.contains("repeat"))                                return "repeater.glb";
-        if (name.contains("gateway"))                               return "gateway.glb";
-        if (name.contains("modem"))                                 return "modem.glb";
-        if (name.contains("router"))                                return "router.glb";
+        if (name.contains("repeat"))                                    return "repeater.glb";
+        if (name.contains("gateway"))                                   return "gateway.glb";
+        if (name.contains("modem"))                                     return "modem.glb";
+        if (name.contains("router"))                                    return "router.glb";
 
         Log.w(TAG, "No GLB match for: '" + name + "' — using router.glb");
         return "router.glb";
     }
 
     // -------------------------------------------------------------------------
-    // Load GLB in background thread — prevents crash for large files
+    // Load GLB in background thread — triggers model load immediately via callback
     // -------------------------------------------------------------------------
 
     private void loadGlbInBackground() {
+        String file = glbFileName();
         new Thread(() -> {
-            String file = glbFileName();
             try {
                 Log.d(TAG, "Loading GLB in background: models/" + file);
                 InputStream is  = getAssets().open("models/" + file);
@@ -143,6 +147,11 @@ public class CameraARActivity extends AppCompatActivity {
                 Log.e(TAG, "❌ GLB error: " + e.getMessage());
                 glbBase64 = null;
             }
+
+            // Callback — trigger model load immediately once GLB is ready
+            isGlbReady = true;
+            runOnUiThread(this::tryLoadModel);
+
         }).start();
     }
 
@@ -151,6 +160,21 @@ public class CameraARActivity extends AppCompatActivity {
         byte[] buf = new byte[8192]; int n;
         while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
         return out.toByteArray();
+    }
+
+    // -------------------------------------------------------------------------
+    // Try to load model — only fires when BOTH page and GLB are ready
+    // -------------------------------------------------------------------------
+
+    private void tryLoadModel() {
+        if (!isPageFinished || !isGlbReady) return; // wait for both
+
+        String fn = glbBase64 != null
+                ? "loadGlbFromBridge();"
+                : "showFallback('" + deviceName + "');";
+
+        modelWebView.evaluateJavascript(
+                "setTimeout(function(){ " + fn + " }, 300);", null);
     }
 
     // -------------------------------------------------------------------------
@@ -282,21 +306,9 @@ public class CameraARActivity extends AppCompatActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!url.startsWith("file:")) return;
-                // Wait for background GLB loading to finish before injecting
-                new Thread(() -> {
-                    // Poll until glbBase64 is ready (max 10 seconds)
-                    int waited = 0;
-                    while (glbBase64 == null && waited < 100) {
-                        try { Thread.sleep(100); } catch (InterruptedException ignored) {}
-                        waited++;
-                    }
-                    String fn = glbBase64 != null
-                            ? "loadGlbFromBridge();"
-                            : "showFallback('" + deviceName + "');";
-                    runOnUiThread(() ->
-                            view.evaluateJavascript(
-                                    "setTimeout(function(){ " + fn + " }, 300);", null));
-                }).start();
+                // Page is ready — trigger model load if GLB is also ready
+                isPageFinished = true;
+                tryLoadModel();
             }
         });
 
