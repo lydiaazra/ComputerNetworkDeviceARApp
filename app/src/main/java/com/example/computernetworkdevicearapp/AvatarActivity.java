@@ -350,7 +350,7 @@ public class AvatarActivity extends AppCompatActivity
                 "        mouthMesh.morphTargetInfluences[idx]=Math.max(0,0.6*Math.abs(Math.sin(t*2.5+offset))*jawVal);" +
                 "      });" +
                 "    }" +
-                "    if(jawBone){jawBone.rotation.x=0.15*Math.abs(Math.sin(t*3.0));}" +
+                "    if(jawBone){jawBone.rotation.x=0.35*Math.abs(Math.sin(t*3.0));}" +
                 "    if(headBone){headBone.rotation.x=0.06*Math.sin(t*1.2);headBone.rotation.y=0.05*Math.sin(t*0.8);}" +
                 "    if(leftHandBone){leftHandBone.rotation.z=0.1*Math.sin(t*1.5);leftHandBone.rotation.x=0.08*Math.sin(t*1.1+1.0);}" +
                 "    if(rightHandBone){rightHandBone.rotation.z=-0.1*Math.sin(t*1.5+0.5);rightHandBone.rotation.x=0.08*Math.sin(t*1.1);}" +
