@@ -34,7 +34,7 @@ import java.util.concurrent.ExecutionException;
 
 public class CameraARActivity extends AppCompatActivity {
 
-    private static final String TAG                   = "CameraAR";
+    private static final String TAG                    = "CameraAR";
     private static final int    CAMERA_PERMISSION_CODE = 300;
     private static final int    CHUNK_SIZE             = 100_000;
 
@@ -44,15 +44,14 @@ public class CameraARActivity extends AppCompatActivity {
     private TextView       tvWhatItDoes, tvHowItWorks, tvWhyItMatters;
     private MaterialButton btnPlace, btnBack;
 
-    private String deviceName;
-    private String whatItDoes;
-    private String howItWorks;
-    private String whyItMatters;
-    private String glbBase64 = null;
+    private String  deviceName;
+    private String  whatItDoes;
+    private String  howItWorks;
+    private String  whyItMatters;
+    private String  glbBase64   = null;
 
-    // Flags to track readiness
-    private boolean isPageFinished = false;
-    private boolean isGlbReady     = false;
+    private boolean isPageReady = false;
+    private boolean isGlbReady  = false;
 
     // -------------------------------------------------------------------------
     // Lifecycle
@@ -65,6 +64,8 @@ public class CameraARActivity extends AppCompatActivity {
 
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName == null || deviceName.isEmpty()) deviceName = "Router";
+
+        Log.d(TAG, "=== Device received: '" + deviceName + "' ===");
 
         // Load GLB FIRST before setupDeviceData() renames deviceName
         loadGlbInBackground();
@@ -86,7 +87,8 @@ public class CameraARActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+                                           @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == CAMERA_PERMISSION_CODE
                 && grantResults.length > 0
@@ -102,83 +104,102 @@ public class CameraARActivity extends AppCompatActivity {
     }
 
     // -------------------------------------------------------------------------
-    // GLB filename — uses contains() for flexible matching
+    // GLB filename
     // -------------------------------------------------------------------------
 
     private String glbFileName() {
         String name = deviceName.toLowerCase().trim();
-        Log.d(TAG, "Device name received: '" + name + "'");
+        Log.d(TAG, "glbFileName() input: '" + name + "'");
 
-        if (name.contains("switch"))                                    return "switch.glb";
-        if (name.contains("hub"))                                       return "hub.glb";
-        if (name.contains("firewall"))                                  return "firewall.glb";
-        if (name.contains("access") || name.contains("wap")
-                || name.equals("ap"))                                   return "wap.glb";
-        if (name.contains("nic") || name.contains("network interface")) return "nic.glb";
-        if (name.contains("repeat"))                                    return "repeater.glb";
-        if (name.contains("gateway"))                                   return "gateway.glb";
-        if (name.contains("modem"))                                     return "modem.glb";
-        if (name.contains("router"))                                    return "router.glb";
+        if (name.contains("switch"))                                               return "switch.glb";
+        if (name.contains("hub"))                                                  return "hub.glb";
+        if (name.contains("firewall"))                                             return "firewall.glb";
+        if (name.contains("access") || name.contains("wap") || name.equals("ap")) return "wap.glb";
+        if (name.contains("nic") || name.contains("network interface"))            return "nic.glb";
+        if (name.contains("repeat"))                                               return "repeater.glb";
+        if (name.contains("gateway"))                                              return "gateway.glb";
+        if (name.contains("modem"))                                                return "modem.glb";
+        if (name.contains("router"))                                               return "router.glb";
 
-        Log.w(TAG, "No GLB match for: '" + name + "' — using router.glb");
+        Log.w(TAG, "No match for '" + name + "' — fallback router.glb");
         return "router.glb";
     }
 
     // -------------------------------------------------------------------------
-    // Load GLB in background thread — triggers model load immediately via callback
+    // Load GLB in background — calls tryLoadModel when done
     // -------------------------------------------------------------------------
 
     private void loadGlbInBackground() {
         String file = glbFileName();
+        Log.d(TAG, "GLB file to load: " + file);
+
+        String[] paths = {
+                "assets/models/" + file,
+                "models/" + file,
+                "assets/" + file,
+                file
+        };
+
         new Thread(() -> {
-            try {
-                Log.d(TAG, "Loading GLB in background: models/" + file);
-                InputStream is  = getAssets().open("models/" + file);
-                byte[]      buf = streamToBytes(is);
-                glbBase64 = Base64.encodeToString(buf, Base64.NO_WRAP);
-                Log.d(TAG, "✅ GLB ready: " + file + " (" + buf.length / 1024 + " KB)");
-            } catch (OutOfMemoryError e) {
-                Log.e(TAG, "❌ OOM — GLB too large: " + file);
-                glbBase64 = null;
-            } catch (IOException e) {
-                Log.w(TAG, "❌ GLB not found: models/" + file);
-                glbBase64 = null;
-            } catch (Exception e) {
-                Log.e(TAG, "❌ GLB error: " + e.getMessage());
-                glbBase64 = null;
+            for (String path : paths) {
+                Log.d(TAG, "Trying path: " + path);
+                try {
+                    InputStream is  = getAssets().open(path);
+                    byte[]      buf = streamToBytes(is);
+                    glbBase64 = Base64.encodeToString(buf, Base64.NO_WRAP);
+                    Log.d(TAG, "✅ SUCCESS: " + path + " (" + buf.length / 1024 + " KB)");
+                    break;
+                } catch (OutOfMemoryError e) {
+                    Log.e(TAG, "❌ OOM at path: " + path);
+                    glbBase64 = null;
+                    break;
+                } catch (IOException e) {
+                    Log.w(TAG, "❌ Not found: " + path);
+                } catch (Exception e) {
+                    Log.e(TAG, "❌ Error at " + path + ": " + e.getMessage());
+                }
             }
 
-            // Callback — trigger model load immediately once GLB is ready
-            isGlbReady = true;
-            runOnUiThread(this::tryLoadModel);
+            if (glbBase64 == null) {
+                Log.e(TAG, "❌ ALL PATHS FAILED for: " + file);
+            }
 
+            isGlbReady = true;
+            // Both conditions met — trigger from whichever finishes last
+            runOnUiThread(this::tryLoadModel);
         }).start();
     }
 
     private byte[] streamToBytes(InputStream is) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        byte[] buf = new byte[8192]; int n;
+        byte[] buf = new byte[8192];
+        int n;
         while ((n = is.read(buf)) != -1) out.write(buf, 0, n);
         return out.toByteArray();
     }
 
     // -------------------------------------------------------------------------
-    // Try to load model — only fires when BOTH page and GLB are ready
+    // tryLoadModel — fires only when BOTH page and GLB are ready
+    // No timeouts, no retries — fires exactly once at the right moment
     // -------------------------------------------------------------------------
 
     private void tryLoadModel() {
-        if (!isPageFinished || !isGlbReady) return; // wait for both
+        if (!isPageReady || !isGlbReady) {
+            Log.d(TAG, "tryLoadModel: waiting — pageReady=" + isPageReady + " glbReady=" + isGlbReady);
+            return;
+        }
+
+        Log.d(TAG, "tryLoadModel: BOTH READY — loading now");
 
         String fn = glbBase64 != null
                 ? "loadGlbFromBridge();"
                 : "showFallback('" + deviceName + "');";
 
-        modelWebView.evaluateJavascript(
-                "setTimeout(function(){ " + fn + " }, 300);", null);
+        modelWebView.evaluateJavascript(fn, null);
     }
 
     // -------------------------------------------------------------------------
-    // Device data — uses contains() for flexible name matching
+    // Device data
     // -------------------------------------------------------------------------
 
     private void setupDeviceData() {
@@ -214,7 +235,7 @@ public class CameraARActivity extends AppCompatActivity {
             howItWorks   = "• Converts data to electrical or optical signals.\n• Has a unique MAC address burned in at manufacturing.\n• Handles framing at OSI Layer 2.\n• Can be wired (Ethernet) or wireless (Wi-Fi).";
             whyItMatters = "Every networked device has a NIC — it is the physical gateway between a device and the network medium.";
 
-        } else if (name.contains("repeater")) {
+        } else if (name.contains("repeat")) {
             deviceName   = "Repeater";
             whatItDoes   = "Amplifies or regenerates a network signal so it can travel longer distances without degrading.";
             howItWorks   = "• Receives a weakened signal on one port.\n• Regenerates and amplifies it.\n• Retransmits out the other port.\n• Does not filter or process data.";
@@ -302,15 +323,8 @@ public class CameraARActivity extends AppCompatActivity {
 
         modelWebView.addJavascriptInterface(new ModelBridge(), "AndroidBridge");
 
-        modelWebView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                if (!url.startsWith("file:")) return;
-                // Page is ready — trigger model load if GLB is also ready
-                isPageFinished = true;
-                tryLoadModel();
-            }
-        });
+        // page_ready signal from JS triggers tryLoadModel via log()
+        modelWebView.setWebViewClient(new WebViewClient());
 
         modelWebView.loadUrl("file:///android_asset/assets/ar_model.html");
     }
@@ -333,7 +347,9 @@ public class CameraARActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public int getGlbLength() {
-            return glbBase64 != null ? glbBase64.length() : 0;
+            int len = glbBase64 != null ? glbBase64.length() : 0;
+            Log.d(TAG, "getGlbLength() = " + len);
+            return len;
         }
 
         @JavascriptInterface
@@ -345,16 +361,23 @@ public class CameraARActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void onModelLoaded(String s) {
-            runOnUiThread(() ->
-                    tvHint.setText("Drag to rotate  •  Pinch to zoom"));
+            runOnUiThread(() -> tvHint.setText("Drag to rotate  •  Pinch to zoom"));
         }
 
         @JavascriptInterface
         public void onModelError(String m) {
+            Log.e(TAG, "Model error: " + m);
             runOnUiThread(() -> tvHint.setText("Showing 3D placeholder"));
         }
 
         @JavascriptInterface
-        public void log(String m) { Log.d(TAG, "JS: " + m); }
+        public void log(String m) {
+            Log.d(TAG, "JS: " + m);
+            if ("page_ready".equals(m)) {
+                // Page is ready — check if GLB is also ready and fire immediately
+                isPageReady = true;
+                runOnUiThread(() -> tryLoadModel());
+            }
+        }
     }
 }

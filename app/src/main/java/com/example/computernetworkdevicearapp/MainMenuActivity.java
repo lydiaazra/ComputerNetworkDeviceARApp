@@ -8,7 +8,7 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class MainMenuActivity extends AppCompatActivity {
 
-    private Button btnAR, btnQuiz, btnAvatar, btnExit;
+    private Button btnAR, btnQuiz, btnAvatar, btnCombinedAR, btnExit;
     private FirebaseAuth mAuth;
 
     @Override
@@ -38,6 +38,11 @@ public class MainMenuActivity extends AppCompatActivity {
         // Add a Network Lab button to your menu
         findViewById(R.id.btnNetworkLab).setOnClickListener(v ->
                 startActivity(new Intent(this, NetworkLabActivity.class)));
+
+        // Combined AR + Avatar Button
+        btnCombinedAR = findViewById(R.id.btnCombinedAR);
+        btnCombinedAR.setOnClickListener(v ->
+                startActivity(new Intent(this, CombinedARActivity.class)));
 
         // Exit Button — logout and close app
         btnExit.setOnClickListener(v -> {

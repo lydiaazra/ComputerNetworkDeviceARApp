@@ -114,6 +114,16 @@
             app:backgroundTint="#4A67F5"
             app:cornerRadius="14dp" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCombinedAR"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:text="AR + Avatar"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            app:backgroundTint="#6C4CF1"
+            app:cornerRadius="16dp"/>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExit"

@@ -16,16 +16,12 @@
     </style>
 </head>
 <body>
-<div id="status">⏳ Loading Three.js...</div>
+<div id="status">Loading Three.js...</div>
 
-<!-- Three.js (local) -->
 <script src="three.min.js"></script>
 <script src="GLTFLoader.js"></script>
 
 <script>
-    // =========================================================================
-    // Scene setup — called once Three.js is ready
-    // =========================================================================
     var renderer, scene, camera, pivot, loader;
     var rotX = 0, rotY = 0, zoom = 3;
     var autoRotate = true;
@@ -35,7 +31,7 @@
       renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0x000000, 0);   // fully transparent
+      renderer.setClearColor(0x000000, 0);
       document.body.appendChild(renderer.domElement);
 
       scene  = new THREE.Scene();
@@ -58,13 +54,15 @@
       animate();
 
       setStatus('Waiting for model...');
-      if (window.AndroidBridge) AndroidBridge.log('Scene ready');
+
+      // Signal Android that Three.js is fully initialised
+      // Android will call loadGlbFromBridge() only when GLB is also ready
+      if (window.AndroidBridge) AndroidBridge.log('page_ready');
     }
 
     // =========================================================================
-    // loadGlbFromBridge — pulls base64 data from Java in ~75 KB chunks,
-    // assembles an ArrayBuffer, then parses with GLTFLoader.parse().
-    // Avoids all URL loading (no file://, no XHR) so it works on every Android.
+    // loadGlbFromBridge
+    // Called by Android ONLY after both page and GLB are ready — no retry needed
     // =========================================================================
     window.loadGlbFromBridge = function() {
       if (!window.AndroidBridge) { showFallback('Device'); return; }
@@ -78,7 +76,6 @@
 
       function fetchNext() {
         if (offset >= total) {
-          // All chunks received — decode base64 → ArrayBuffer
           setStatus('Parsing model...');
           var b64    = chunks.join('');
           var binary = atob(b64);
@@ -114,40 +111,12 @@
         chunks.push(chunk);
         offset += chunk.length;
         setStatus('Loading... ' + Math.round(offset / total * 100) + '%');
-        setTimeout(fetchNext, 0); // yield so UI stays responsive
+        setTimeout(fetchNext, 0);
       }
 
       fetchNext();
     };
 
-    // Legacy entry kept for compatibility (not used in new flow)
-    window.loadGlb = function(dataUrl) {
-      setStatus('Loading 3D model...');
-      loader.load(dataUrl,
-        function(gltf) {
-          while (pivot.children.length) pivot.remove(pivot.children[0]);
-          var model = gltf.scene;
-          var box  = new THREE.Box3().setFromObject(model);
-          var ctr  = box.getCenter(new THREE.Vector3());
-          var size = box.getSize(new THREE.Vector3());
-          var sc   = 2.0 / Math.max(size.x, size.y, size.z);
-          model.scale.setScalar(sc);
-          model.position.sub(ctr.multiplyScalar(sc));
-          pivot.add(model);
-          setStatus('Drag to rotate  •  Pinch to zoom');
-          if (window.AndroidBridge) AndroidBridge.onModelLoaded('device');
-        },
-        null,
-        function(err) {
-          if (window.AndroidBridge) AndroidBridge.onModelError(err ? (err.message || 'load failed') : 'load failed');
-          showFallback('Device');
-        }
-      );
-    };
-
-    // =========================================================================
-    // showFallback — called when no GLB available
-    // =========================================================================
     window.showFallback = function(name) {
       while (pivot.children.length) pivot.remove(pivot.children[0]);
 
@@ -175,17 +144,11 @@
       setStatus((name||'Device') + ' — add .glb to assets/models/ for real model');
     };
 
-    // =========================================================================
-    // resetCamera — called from btnPlace
-    // =========================================================================
     window.resetCamera = function() {
       rotX = 0; rotY = 0; zoom = 3;
       autoRotate = true;
     };
 
-    // =========================================================================
-    // Touch controls
-    // =========================================================================
     function addTouchListeners() {
       var el = renderer.domElement;
 
@@ -221,12 +184,9 @@
         }
       }, {passive:true});
 
-      el.addEventListener('touchend',  function() { pinchDist = null; }, {passive:true});
+      el.addEventListener('touchend', function() { pinchDist = null; }, {passive:true});
     }
 
-    // =========================================================================
-    // Render loop
-    // =========================================================================
     function animate() {
       requestAnimationFrame(animate);
       if (autoRotate) rotY += 0.5;
@@ -240,9 +200,6 @@
       document.getElementById('status').textContent = msg;
     }
 
-    // =========================================================================
-    // Start — wait for Three.js scripts to load
-    // =========================================================================
     window.addEventListener('load', function() {
       var attempts = 0;
       function tryInit() {
@@ -251,7 +208,7 @@
         } else if (attempts++ < 20) {
           setTimeout(tryInit, 300);
         } else {
-          setStatus('Failed to load Three.js — check internet connection');
+          setStatus('Failed to load Three.js');
         }
       }
       tryInit();
@@ -265,4 +222,4 @@
     });
 </script>
 </body>
-</html>
+</html>`
