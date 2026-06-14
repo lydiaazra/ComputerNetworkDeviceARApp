@@ -56,8 +56,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="44dp"
+        android:paddingEnd="44dp"
         android:clipToPadding="false">
 
         <androidx.cardview.widget.CardView
@@ -70,28 +70,18 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="8dp">
+                android:orientation="vertical">
 
                 <!-- AR Devices -->
                 <LinearLayout
                     android:id="@+id/btnAR"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
-                    android:background="@drawable/bg_menu_item"
-                    android:layout_marginBottom="4dp">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_blue"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔮" android:textSize="20sp"/>
-                    </LinearLayout>
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
+                    android:background="@drawable/bg_menu_item">
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -100,29 +90,28 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.8dp"
+                    android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+                    android:background="#1E2A50"/>
 
                 <!-- Device Demo -->
                 <LinearLayout
                     android:id="@+id/btnDeviceDemo"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
-                    android:background="@drawable/bg_menu_item"
-                    android:layout_marginBottom="4dp">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_teal"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📱" android:textSize="20sp"/>
-                    </LinearLayout>
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
+                    android:background="@drawable/bg_menu_item">
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -131,29 +120,28 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.8dp"
+                    android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+                    android:background="#1E2A50"/>
 
                 <!-- Interactive Lab -->
                 <LinearLayout
                     android:id="@+id/btnNetworkLab"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
-                    android:background="@drawable/bg_menu_item"
-                    android:layout_marginBottom="4dp">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_green"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🧪" android:textSize="20sp"/>
-                    </LinearLayout>
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
+                    android:background="@drawable/bg_menu_item">
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -162,29 +150,28 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.8dp"
+                    android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+                    android:background="#1E2A50"/>
 
                 <!-- Quiz -->
                 <LinearLayout
                     android:id="@+id/btnQuiz"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
-                    android:background="@drawable/bg_menu_item"
-                    android:layout_marginBottom="4dp">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_blue"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🎯" android:textSize="20sp"/>
-                    </LinearLayout>
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
+                    android:background="@drawable/bg_menu_item">
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -193,29 +180,28 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.8dp"
+                    android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+                    android:background="#1E2A50"/>
 
                 <!-- Avatar Assistant -->
                 <LinearLayout
                     android:id="@+id/btnAvatar"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
-                    android:background="@drawable/bg_menu_item"
-                    android:layout_marginBottom="4dp">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_purple"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🤖" android:textSize="20sp"/>
-                    </LinearLayout>
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
+                    android:background="@drawable/bg_menu_item">
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -224,28 +210,28 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="0.8dp"
+                    android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
+                    android:background="#1E2A50"/>
 
                 <!-- AR + Avatar -->
                 <LinearLayout
                     android:id="@+id/btnCombinedAR"
                     android:layout_width="match_parent"
-                    android:layout_height="64dp"
+                    android:layout_height="60dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:padding="10dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="16dp"
                     android:background="@drawable/bg_menu_item">
-                    <LinearLayout
-                        android:layout_width="42dp"
-                        android:layout_height="42dp"
-                        android:background="@drawable/bg_menu_icon_purple"
-                        android:gravity="center"
-                        android:layout_marginEnd="14dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📚" android:textSize="20sp"/>
-                    </LinearLayout>
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -254,8 +240,12 @@
                         android:textColor="#FFFFFF"
                         android:textSize="15sp"
                         android:textStyle="bold"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="›"
+                        android:textColor="#8FA5C3"
+                        android:textSize="22sp"/>
                 </LinearLayout>
 
             </LinearLayout>
@@ -267,10 +257,10 @@
         android:id="@+id/btnExit"
         android:layout_width="match_parent"
         android:layout_height="54dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginStart="44dp"
+        android:layout_marginEnd="44dp"
         android:layout_marginTop="12dp"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="48dp"
         android:text="⎋  Logout"
         android:textAllCaps="false"
         android:textColor="#FF8FA0"

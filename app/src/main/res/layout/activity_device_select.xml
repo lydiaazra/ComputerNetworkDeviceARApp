@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Select a Device"
-            android:textColor="#FFFFFF"
+            android:textColor="#8FA5C3"
             android:textSize="26sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Tap a device to view it in AR"
-            android:textColor="#7EDCFF"
+            android:textColor="#8FA5C3"
             android:textSize="14sp"
             android:gravity="center"
             android:layout_marginBottom="28dp"/>
@@ -68,7 +68,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Router"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#8FA5C3"
                         android:textSize="18sp"
                         android:textStyle="bold"/>
 
@@ -85,7 +85,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#4A67F5"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -125,7 +125,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Switch"
-                        android:textColor="#FFFFFF"
+                        android:textColor="#8FA5C3"
                         android:textSize="18sp"
                         android:textStyle="bold"/>
 
@@ -142,7 +142,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#1E9E49"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -199,7 +199,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#BA7517"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -256,7 +256,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#C73D5A"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -313,7 +313,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#14C7E3"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -370,7 +370,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#9B59B6"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
@@ -484,7 +484,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#2ECC71"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
