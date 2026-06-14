@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Repeater Lab</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+body{background:#0D1117;font-family:system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+.topbar{background:#161B22;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+.back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+.title{color:#fff;font-size:14px;font-weight:600;flex:1}
+.mode-btn{background:#1F6FEB;border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+
+.toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0}
+.tb-label{color:#8FA5C3;font-size:10px;font-weight:600;letter-spacing:0.05em}
+.device-chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.device-chip:active{background:#388BFD22;border-color:#1F6FEB}
+.device-chip .icon{font-size:16px}
+
+.canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;touch-action:none}
+
+.info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.info-icon{font-size:20px}
+.info-text{flex:1}
+.info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
+.info-sub{color:#8FA5C3;font-size:11px}
+
+.hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.hint-icon{font-size:36px;margin-bottom:8px}
+.hint-text{color:#8FA5C3;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="goBack()">← Back</button>
+  <span class="title">📶 Repeater — Interactive Lab</span>
+  <button class="mode-btn" onclick="loadDemo()">Demo</button>
+</div>
+
+<div class="toolbar">
+  <span class="tb-label">ADD:</span>
+  <div class="device-chip" onclick="addDevice('pc')"><span class="icon">💻</span>PC</div>
+  <div class="device-chip" onclick="addDevice('repeater')"><span class="icon">📶</span>Repeater</div>
+  <div class="device-chip" onclick="clearAll()"><span class="icon">🗑️</span>Clear</div>
+</div>
+
+<div class="canvas-wrap">
+  <canvas id="canvas"></canvas>
+  <div class="hint" id="hint">
+    <div class="hint-icon">📶</div>
+    <div class="hint-text">Tap "Demo" to see how a Repeater works<br>or add devices manually</div>
+  </div>
+</div>
+
+<div class="info-bar" id="infoBar">
+  <span class="info-icon">📶</span>
+  <div class="info-text">
+    <div class="info-title" id="infoTitle">Repeater Lab</div>
+    <div class="info-sub" id="infoSub">Tap a device to learn about it. Connect PCs to the repeater.</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx    = canvas.getContext('2d');
+
+// ─── Device definitions ───────────────────────────────────────────────────
+const DEFS = {
+  pc: {
+    label:'PC', color:'#1F6FEB',
+    info:'End device that sends and receives data over the network.',
+    draw(ctx, x, y, scale) { drawPC(ctx, x, y, scale); }
+  },
+  repeater: {
+    label:'Repeater', color:'#388BFD',
+    info:'Regenerates and amplifies weak signals to extend network range.',
+    draw(ctx, x, y, scale) { drawRepeater(ctx, x, y, scale); }
+  }
+};
+
+// ─── State ────────────────────────────────────────────────────────────────
+let devices = [], cables = [], packets = [];
+let selected = null, dragging = null;
+let dragOx = 0, dragOy = 0, dragMoved = false;
+let longTimer = null, nextId = 1;
+let animT = 0;
+
+// ─── Draw PC ─────────────────────────────────────────────────────────────
+function drawPC(ctx, x, y, sc = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+  // Monitor
+  ctx.fillStyle = '#1A2060';
+  roundRect(ctx, -20, -24, 40, 30, 4); ctx.fill();
+  ctx.fillStyle = '#4A6AE0';
+  roundRect(ctx, -17, -21, 34, 22, 2); ctx.fill();
+  // Screen lines
+  ctx.fillStyle = 'rgba(120,160,255,0.5)';
+  for(let i=0;i<3;i++){roundRect(ctx,-13,-18+i*6,24,3,1);ctx.fill();}
+  // Stand
+  ctx.fillStyle = '#1A2060';
+  roundRect(ctx,-3,6,6,6,1);ctx.fill();
+  roundRect(ctx,-10,12,20,4,2);ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw Repeater ───────────────────────────────────────────────────────
+function drawRepeater(ctx, x, y, sc = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc);
+  // Body
+  ctx.fillStyle = '#1A4A7A';
+  roundRect(ctx, -28, -14, 56, 28, 5); ctx.fill();
+  ctx.fillStyle = '#1F6FEB';
+  roundRect(ctx, -26, -12, 52, 24, 4); ctx.fill();
+  // Grille lines
+  ctx.strokeStyle = '#0D3060';
+  ctx.lineWidth = 1;
+  for(let i=-16;i<=16;i+=8){
+    ctx.beginPath();ctx.moveTo(i,-12);ctx.lineTo(i,12);ctx.stroke();
+  }
+  // Ports
+  for(let i=0;i<4;i++){
+    ctx.fillStyle='#0D2040';
+    roundRect(ctx,-20+i*10,-6,8,5,1);ctx.fill();
+    ctx.fillStyle='#00FF88';
+    ctx.beginPath();ctx.arc(-16+i*10,-3.5,2,0,Math.PI*2);ctx.fill();
+  }
+  // LEDs
+  ctx.fillStyle='#00FF88';
+  ctx.beginPath();ctx.arc(20,6,3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FFB300';
+  ctx.beginPath();ctx.arc(14,6,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+// ─── Draw signal wave ─────────────────────────────────────────────────────
+function drawSignalWave(ctx, x, y, amplitude, frequency, color, label, t) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 2;
+  ctx.beginPath();
+  const w = 60;
+  for(let i=0;i<=w;i++){
+    const wx = x - w/2 + i;
+    const wy = y + amplitude * Math.sin((i/w) * Math.PI * frequency * 2 + t);
+    i===0 ? ctx.moveTo(wx,wy) : ctx.lineTo(wx,wy);
+  }
+  ctx.stroke();
+  // Label
+  ctx.fillStyle = color;
+  ctx.font = 'bold 10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x, y + amplitude + 16);
+  ctx.restore();
+}
+
+// ─── Draw digital signal ──────────────────────────────────────────────────
+function drawDigitalSignal(ctx, x, y, color, label) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 2.5;
+  ctx.beginPath();
+  const steps = [0,0,1,1,0,0,1,1,0,0,1,1];
+  const w = 60, h = 14;
+  steps.forEach((v,i) => {
+    const sx = x - w/2 + (i/steps.length)*w;
+    const sy = y + (v===1?-h:0);
+    const ex = x - w/2 + ((i+1)/steps.length)*w;
+    if(i===0) ctx.moveTo(sx,sy);
+    else ctx.lineTo(sx,sy);
+    ctx.lineTo(ex,sy);
+  });
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.font = 'bold 10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x, y + 28);
+  ctx.restore();
+}
+
+// ─── Cable arrow ──────────────────────────────────────────────────────────
+function drawCable(ctx, a, b, color, dashed) {
+  const dx=b.x-a.x, dy=b.y-a.y, len=Math.sqrt(dx*dx+dy*dy);
+  if(len<1)return;
+  const ux=dx/len, uy=dy/len;
+  const ax=a.x+ux*32, ay=a.y+uy*32;
+  const bx=b.x-ux*32, by=b.y-uy*32;
+  ctx.save();
+  ctx.strokeStyle=color; ctx.lineWidth=2;
+  if(dashed) ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(bx,by); ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrowhead
+  const hl=8,hw=4;
+  const ex=bx-ux*hl,ey=by-uy*hl;
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(bx,by);
+  ctx.lineTo(ex-uy*hw,ey+ux*hw);
+  ctx.lineTo(ex+uy*hw,ey-ux*hw);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// ─── Flowing packet ───────────────────────────────────────────────────────
+function drawPackets(ctx, t) {
+  cables.forEach(c => {
+    const a = devices.find(d=>d.id===c.a);
+    const b = devices.find(d=>d.id===c.b);
+    if(!a||!b)return;
+    const prog = (t * 0.4) % 1;
+    const px = a.x + (b.x-a.x)*prog;
+    const py = a.y + (b.y-a.y)*prog;
+    const rep = devices.find(d=>d.type==='repeater'&&(d.id===c.a||d.id===c.b));
+    const isAfterRepeater = rep && (
+      (b.id===rep.id && prog > 0.5) ||
+      (a.id===rep.id && prog > 0.5)
+    );
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI*2);
+    ctx.fillStyle = isAfterRepeater ? '#00FF88' : '#FFB300';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+}
+
+// ─── Main draw ────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Grid dots
+  ctx.fillStyle='rgba(100,140,200,0.1)';
+  for(let x=20;x<canvas.width;x+=30)
+    for(let y=20;y<canvas.height;y+=30){
+      ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();
+    }
+
+  // ─── Connection lines with signal annotations ─────────────────────
+  const repeater = devices.find(d=>d.type==='repeater');
+  cables.forEach(c => {
+    const a=devices.find(d=>d.id===c.a);
+    const b=devices.find(d=>d.id===c.b);
+    if(!a||!b)return;
+
+    const isLeftSide  = repeater && ((b.id===repeater.id && a.x<repeater.x) || (a.id===repeater.id && b.x<repeater.x));
+    const isRightSide = repeater && ((b.id===repeater.id && a.x>repeater.x) || (a.id===repeater.id && b.x>repeater.x));
+
+    drawCable(ctx, a, b, '#388BFD', false);
+
+    // Signal annotation at midpoint
+    if(repeater) {
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2 - 40;
+      if(isLeftSide) {
+        drawSignalWave(ctx, mx, my, 10, 2, '#FFB300', 'Weak Signal', animT);
+      } else if(isRightSide) {
+        drawDigitalSignal(ctx, mx, my, '#00FF88', 'Amplified Signal');
+      }
+    }
+  });
+
+  // Packets
+  drawPackets(ctx, animT);
+
+  // Devices
+  devices.forEach(d => {
+    const def  = DEFS[d.type];
+    const isSel= selected && selected.id===d.id;
+
+    if(isSel){
+      ctx.save();
+      ctx.strokeStyle=def.color; ctx.lineWidth=2.5; ctx.setLineDash([4,3]);
+      ctx.beginPath();ctx.arc(d.x,d.y,34,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+    }
+
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+    def.draw(ctx, d.x, d.y, 1);
+    ctx.restore();
+
+    // Label
+    ctx.font='bold 10px system-ui';
+    ctx.textAlign='center';
+    const tw=ctx.measureText(def.label).width;
+    ctx.fillStyle='rgba(13,17,23,0.85)';
+    roundRect(ctx,d.x-tw/2-5,d.y+22,tw+10,16,3);ctx.fill();
+    ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=isSel?def.color:'#C9D1D9';
+    ctx.textBaseline='middle';ctx.fillText(def.label,d.x,d.y+30);
+  });
+}
+
+// ─── Animation ────────────────────────────────────────────────────────────
+function animate(){
+  animT += 0.05;
+  if(devices.length>0) draw();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ─── Interaction ──────────────────────────────────────────────────────────
+function canvasPos(e){
+  const r=canvas.getBoundingClientRect();
+  const s=e.touches?e.touches[0]:e;
+  return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};
+}
+function hitDevice(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<34);}
+
+function onDown(e){
+  const{x,y}=canvasPos(e);
+  dragMoved=false;
+  const d=hitDevice(x,y);
+  if(d){
+    dragging=d; dragOx=x-d.x; dragOy=y-d.y;
+    longTimer=setTimeout(()=>{ if(!dragMoved) deleteDevice(d); },700);
+  }
+}
+function onMove(e){
+  e.preventDefault();
+  if(!dragging)return;
+  const{x,y}=canvasPos(e);
+  if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5) dragMoved=true;
+  dragging.x=x-dragOx; dragging.y=y-dragOy;
+  draw();
+}
+function onUp(e){
+  clearTimeout(longTimer);
+  if(dragging&&!dragMoved){
+    const{x,y}=canvasPos(e);
+    handleTap(x,y);
+  }
+  dragging=null; dragMoved=false;
+}
+
+canvas.addEventListener('mousedown',onDown);
+canvas.addEventListener('mousemove',onMove);
+canvas.addEventListener('mouseup',onUp);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+function handleTap(x,y){
+  const d=hitDevice(x,y);
+  if(d){
+    if(selected&&selected.id!==d.id){
+      connectDevices(selected,d);
+      selected=null;
+    } else {
+      selected=d;
+      const def=DEFS[d.type];
+      document.getElementById('infoTitle').textContent=def.label;
+      document.getElementById('infoSub').textContent=def.info;
+    }
+  } else {
+    selected=null;
+    document.getElementById('infoTitle').textContent='Repeater Lab';
+    document.getElementById('infoSub').textContent='Tap a device to select. Tap another to connect. Long-press to delete.';
+  }
+  draw();
+}
+
+function connectDevices(a,b){
+  const ex=cables.find(c=>(c.a===a.id&&c.b===b.id)||(c.b===a.id&&c.a===b.id));
+  if(!ex){
+    cables.push({a:a.id,b:b.id});
+    document.getElementById('infoTitle').textContent='Connected!';
+    document.getElementById('infoSub').textContent=
+      DEFS[a.type].label+' ↔ '+DEFS[b.type].label+' — Watch the signal flow!';
+    document.getElementById('hint').style.display='none';
+  }
+  draw();
+}
+
+function deleteDevice(d){
+  devices=devices.filter(x=>x.id!==d.id);
+  cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);
+  if(selected&&selected.id===d.id)selected=null;
+  draw();
+}
+
+function addDevice(type){
+  document.getElementById('hint').style.display='none';
+  const cx=canvas.width/2+(Math.random()-0.5)*100;
+  const cy=canvas.height/2+(Math.random()-0.5)*60;
+  devices.push({id:nextId++,type,x:cx,y:cy});
+  draw();
+}
+
+// ─── Demo layout ──────────────────────────────────────────────────────────
+function loadDemo(){
+  clearAll();
+  document.getElementById('hint').style.display='none';
+  const W=canvas.width, H=canvas.height;
+
+  devices=[
+    {id:nextId++,type:'pc',      x:W*0.12,y:H*0.35},
+    {id:nextId++,type:'pc',      x:W*0.12,y:H*0.65},
+    {id:nextId++,type:'repeater',x:W*0.50,y:H*0.50},
+    {id:nextId++,type:'pc',      x:W*0.88,y:H*0.35},
+    {id:nextId++,type:'pc',      x:W*0.88,y:H*0.65},
+  ];
+  const ids=devices.map(d=>d.id);
+  cables=[
+    {a:ids[0],b:ids[2]},
+    {a:ids[1],b:ids[2]},
+    {a:ids[2],b:ids[3]},
+    {a:ids[2],b:ids[4]},
+  ];
+  document.getElementById('infoTitle').textContent='Repeater — Signal Flow';
+  document.getElementById('infoSub').textContent='🟡 Weak signal enters → 🟢 Amplified signal exits. Watch the packets change colour!';
+  draw();
+}
+
+function clearAll(){
+  devices=[]; cables=[]; selected=null;
+  document.getElementById('hint').style.display='flex';
+  document.getElementById('infoTitle').textContent='Repeater Lab';
+  document.getElementById('infoSub').textContent='Tap Demo or add devices manually.';
+  draw();
+}
+
+function goBack(){
+  if(window.AndroidBridge) AndroidBridge.goBack();
+  else history.back();
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function roundRect(c,x,y,w,h,r){
+  c.beginPath();
+  c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);
+  c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);
+  c.closePath();
+}
+
+window.addEventListener('resize',()=>{
+  canvas.width=canvas.offsetWidth;
+  canvas.height=canvas.offsetHeight;
+  draw();
+});
+canvas.width=canvas.offsetWidth;
+canvas.height=canvas.offsetHeight;
+</script>
+</body>
+</html>

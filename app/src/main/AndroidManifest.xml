@@ -2,13 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Permissions -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-feature android:name="android.hardware.camera.ar" android:required="true"/>
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
-
 
     <application
         android:allowBackup="true"
@@ -23,57 +21,46 @@
         android:extractNativeLibs="true"
         android:theme="@style/Theme.ComputerNetworkDeviceARApp">
 
-        <!-- ARCore requirement -->
         <meta-data
             android:name="com.google.ar.core"
             android:value="required"
             tools:replace="android:value"/>
 
-        <!-- Welcome Screen - App starts here -->
+        <!-- Launcher -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <!-- Login Screen -->
         <activity android:name=".LoginActivity"/>
-
-        <!-- Register Screen -->
         <activity android:name=".RegisterActivity"/>
-
-        <!-- Main Menu Screen -->
         <activity android:name=".MainMenuActivity"/>
-
-        <!-- Quiz Level Selection Screen -->
         <activity android:name=".QuizLevelActivity"/>
+        <activity android:name=".ResultActivity"/>
+        <activity android:name=".DeviceDisplay"/>
+        <activity android:name=".CombinedARActivity"/>
 
-        <!-- AR Quiz Screen -->
-        <activity android:name=".ARQuizActivity"
+        <activity
+            android:name=".ARQuizActivity"
             android:exported="false"
-            android:windowSoftInputMode="adjustPan"/>/>
+            android:windowSoftInputMode="adjustPan"/>
 
-        <!-- Avatar Screen -!>
-       <!- Change adjustResize to adjustPan -->
         <activity
             android:name=".AvatarActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustPan"/>
 
-        <!-- Result Screen Screen -->
-        <activity android:name=".ResultActivity"/>
-
-        <!-- AR Device Screen -->
-        <activity android:name=".DeviceDisplay"/>
-
-        <activity android:name=".CameraARActivity"
+        <activity
+            android:name=".CameraARActivity"
             android:exported="false"
             android:screenOrientation="portrait"/>
 
-        <activity android:name=".DeviceSelectActivity"
+        <activity
+            android:name=".DeviceSelectActivity"
             android:exported="false"/>
 
         <activity
@@ -81,7 +68,9 @@
             android:exported="false"
             android:screenOrientation="portrait"/>
 
-        <activity android:name=".CombinedARActivity"/>
+        <activity
+            android:name=".DeviceDemoSelectActivity"
+            android:exported="false"/>
 
     </application>
 

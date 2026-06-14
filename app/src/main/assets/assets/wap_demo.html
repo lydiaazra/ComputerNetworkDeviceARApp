@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Access Point Lab</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+        html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
+        body{display:flex;flex-direction:column}
+        .topbar{background:#161B22;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+        .title{color:#fff;font-size:14px;font-weight:600;flex:1}
+        .mode-btn{background:#1F6FEB;border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
+        .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
+        .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
+        .chip:active{background:#388BFD22;border-color:#1F6FEB}
+        .canvas-wrap{flex:1;position:relative;overflow:hidden}
+        #canvas{display:block;touch-action:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+        .hint-icon{font-size:36px;margin-bottom:8px}
+        .hint-text{color:#8FA5C3;font-size:13px}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .info-icon{font-size:20px}
+        .info-text{flex:1}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4}
+    </style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <span class="title">📶 Access Point — Interactive Lab</span>
+    <button class="mode-btn" onclick="loadDemo()">Demo</button>
+</div>
+<div class="toolbar" id="toolbar">
+    <span class="tb-label">ADD:</span>
+    <div class="chip" onclick="addDevice('ap')">📶 Access Point</div>
+    <div class="chip" onclick="addDevice('router')">🔀 Router</div>
+    <div class="chip" onclick="addDevice('laptop')">💻 Laptop</div>
+    <div class="chip" onclick="addDevice('phone')">📱 Phone</div>
+    <div class="chip" onclick="addDevice('pc')">🖥️ PC</div>
+    <div class="chip" onclick="clearAll()">🗑️ Clear</div>
+</div>
+<div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="hint" id="hint">
+        <div class="hint-icon">📶</div>
+        <div class="hint-text">Tap "Demo" to see how a Wireless Access Point works<br>or add devices manually</div>
+    </div>
+</div>
+<div class="info-bar" id="infobar">
+    <span class="info-icon" id="infoIcon">📶</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">Access Point Lab</div>
+        <div class="info-sub" id="infoSub">Tap the AP to see SSID details. Tap a wireless device to connect it to the AP.</div>
+    </div>
+</div>
+
+<script>
+    const canvas=document.getElementById('canvas');
+    const ctx=canvas.getContext('2d');
+    const SC=1.6;
+
+    function resize(){
+      const th=document.getElementById('topbar').getBoundingClientRect().height;
+      const tbh=document.getElementById('toolbar').getBoundingClientRect().height;
+      const ih=document.getElementById('infobar').getBoundingClientRect().height;
+      canvas.width=window.innerWidth;
+      canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
+      draw();
+    }
+
+    const DEFS={
+      ap:    { label:'Access Point', color:'#0F9E70', info:'Broadcasts Wi-Fi SSID. Bridges wireless clients to the wired LAN. Operates at OSI Layer 2.' },
+      router:{ label:'Router',       color:'#1F6FEB', info:'Connected to the AP via Ethernet. Routes traffic between LAN and internet.' },
+      laptop:{ label:'Laptop',       color:'#7EDCFF', info:'Wireless client. Connects to AP via Wi-Fi. Receives IP from DHCP through the AP.' },
+      phone: { label:'Phone',        color:'#B060FF', info:'Mobile wireless client. Connects to AP via Wi-Fi 2.4GHz or 5GHz band.' },
+      pc:    { label:'PC',           color:'#4A6AE0', info:'Wired client connected to the router via Ethernet cable.' }
+    };
+
+    function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+
+    function drawDev(d){
+      ctx.save();ctx.translate(d.x,d.y);ctx.scale(SC,SC);
+      switch(d.type){
+        case 'ap':
+          // Base disc
+          ctx.fillStyle='#063C28';ctx.beginPath();ctx.ellipse(0,8,24,7,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#0F6848';ctx.beginPath();ctx.ellipse(0,6,22,6,0,0,Math.PI*2);ctx.fill();
+          // Body flat disc
+          ctx.fillStyle='#0A4030';ctx.beginPath();ctx.ellipse(0,0,22,6,0,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#14A070';ctx.beginPath();ctx.ellipse(0,-1,20,5,0,0,Math.PI*2);ctx.fill();
+          // Antenna
+          ctx.strokeStyle='#0A3020';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(0,-22);ctx.stroke();
+          ctx.fillStyle='#20D090';ctx.beginPath();ctx.arc(0,-22,3,0,Math.PI*2);ctx.fill();
+          // Status LEDs
+          ctx.fillStyle='#00FF88';ctx.beginPath();ctx.arc(8,0,2,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#FFB300';ctx.beginPath();ctx.arc(14,0,2,0,Math.PI*2);ctx.fill();
+          break;
+        case 'router':
+          ctx.fillStyle='#0D2850';rr(ctx,-24,-12,48,24,4);ctx.fill();
+          ctx.fillStyle='#1A5FAD';rr(ctx,-22,-10,44,20,3);ctx.fill();
+          ctx.fillStyle='#2A82D4';ctx.beginPath();ctx.moveTo(-22,-10);ctx.lineTo(-17,-18);ctx.lineTo(28,-18);ctx.lineTo(22,-10);ctx.closePath();ctx.fill();
+          for(let i=0;i<3;i++){ctx.strokeStyle='#7ECDF5';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(-8+i*8,-10);ctx.lineTo(-10+i*8,-22);ctx.stroke();}
+          for(let i=0;i<4;i++){ctx.fillStyle='#061828';rr(ctx,-16+i*9,-1,7,5,1);ctx.fill();ctx.fillStyle=i===0?'#FFB300':'#00FF88';ctx.beginPath();ctx.arc(-12.5+i*9,1.5,1.5,0,Math.PI*2);ctx.fill();}
+          break;
+        case 'laptop':
+          ctx.fillStyle='#1A2060';rr(ctx,-18,-20,36,26,3);ctx.fill();
+          ctx.fillStyle='#4A6AE0';rr(ctx,-15,-17,30,19,2);ctx.fill();
+          ctx.fillStyle='rgba(120,160,255,0.5)';for(let i=0;i<3;i++){rr(ctx,-11,-14+i*6,22,3,1);ctx.fill();}
+          ctx.fillStyle='#283080';ctx.beginPath();ctx.moveTo(-18,6);ctx.lineTo(18,6);ctx.lineTo(20,12);ctx.lineTo(-20,12);ctx.closePath();ctx.fill();
+          break;
+        case 'phone':
+          ctx.fillStyle='#1A1A2E';rr(ctx,-10,-22,20,44,5);ctx.fill();
+          ctx.fillStyle='#3A3A6E';rr(ctx,-8,-20,16,38,3);ctx.fill();
+          ctx.fillStyle='rgba(100,140,255,0.4)';rr(ctx,-7,-19,14,32,2);ctx.fill();
+          ctx.fillStyle='#5A5AFF';ctx.beginPath();ctx.arc(0,-16,2,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#3A3A6E';ctx.beginPath();ctx.arc(0,18,3,0,Math.PI*2);ctx.fill();
+          break;
+        case 'pc':
+          ctx.fillStyle='#1A2060';rr(ctx,-20,-24,40,30,3);ctx.fill();
+          ctx.fillStyle='#4A6AE0';rr(ctx,-17,-21,34,23,2);ctx.fill();
+          ctx.fillStyle='rgba(120,160,255,0.5)';for(let i=0;i<3;i++){rr(ctx,-12,-17+i*7,24,4,1);ctx.fill();}
+          ctx.fillStyle='#1A2060';rr(ctx,-3,6,6,6,1);ctx.fill();rr(ctx,-10,12,20,4,2);ctx.fill();
+          break;
+      }
+      ctx.restore();
+    }
+
+    // Wi-Fi signal rings around AP
+    function drawWifiRings(ap, t){
+      const rings=[0.35,0.6,0.85];
+      rings.forEach((phase,i)=>{
+        const p=(t*0.4+phase)%1;
+        const radius=30+p*120;
+        const alpha=Math.max(0,(1-p)*0.35);
+        ctx.save();
+        ctx.strokeStyle=`rgba(20,160,112,${alpha})`;
+        ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(ap.x,ap.y,radius,0,Math.PI*2);ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // SSID info popup
+    function drawSSIDPopup(ap){
+      const bw=190,bh=115,bx=ap.x+46,by=ap.y-90;
+      ctx.save();
+      ctx.fillStyle='rgba(6,30,20,0.97)';rr(ctx,bx,by,bw,bh,10);ctx.fill();
+      ctx.strokeStyle='#0F9E70';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#0F9E70';ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText('📶 Access Point Info',bx+10,by+8);
+      ctx.strokeStyle='#0F9E7044';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+22);ctx.lineTo(bx+bw-8,by+22);ctx.stroke();
+      const rows=[
+        ['SSID:','NetworkLab_WiFi'],
+        ['Security:','WPA2-AES'],
+        ['Frequency:','2.4GHz / 5GHz'],
+        ['Channel:','Ch 6 / Ch 36'],
+        ['OSI Layer:','Layer 2'],
+      ];
+      rows.forEach(([k,v],i)=>{
+        ctx.fillStyle='#8FA5C3';ctx.font='9px system-ui';ctx.fillText(k,bx+10,by+28+i*17);
+        ctx.fillStyle=i===0?'#FFD040':i===1?'#00FF88':'#C9D1D9';
+        ctx.font='bold 9px system-ui';ctx.fillText(v,bx+78,by+28+i*17);
+      });
+      ctx.restore();
+    }
+
+    // Wi-Fi signal strength bars on wireless device
+    function drawSignalBars(d, strength){
+      ctx.save();ctx.translate(d.x+22*SC*0.7,d.y-22*SC*0.7);
+      const bars=4,bw=4,gap=2,bh=10;
+      for(let i=0;i<bars;i++){
+        const h=bh*(i+1)/bars;
+        ctx.fillStyle=i<strength?'#00FF88':'#333';
+        rr(ctx,i*(bw+gap),bh-h,bw,h,1);ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Wireless connection dashed line
+    function drawWirelessLink(a,b,t){
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
+      const ux=dx/len,uy=dy/len,g=HIT*0.88;
+      ctx.save();
+      ctx.strokeStyle='#0F9E7077';ctx.lineWidth=2;ctx.setLineDash([6,5]);
+      ctx.lineDashOffset=-(t*40)%11;
+      ctx.beginPath();ctx.moveTo(a.x+ux*g,a.y+uy*g);ctx.lineTo(b.x-ux*g,b.y-uy*g);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+
+      // Animated packet
+      const p=(t*0.25)%1;
+      const px=a.x+(b.x-a.x)*p,py=a.y+(b.y-a.y)*p;
+      ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
+      ctx.fillStyle='#0F9E70';ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.4)';ctx.lineWidth=1;ctx.stroke();
+    }
+
+    // Wired cable
+    function drawWiredLink(a,b){
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
+      const ux=dx/len,uy=dy/len,g=HIT*0.88;
+      ctx.save();ctx.strokeStyle='#1F6FEB88';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(a.x+ux*g,a.y+uy*g);ctx.lineTo(b.x-ux*g,b.y-uy*g);ctx.stroke();
+      // Ethernet label
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-28;
+      const lbl='Ethernet (PoE)';
+      ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      const tw=ctx.measureText(lbl).width;
+      ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,mx-tw/2-6,my-10,tw+12,20,5);ctx.fill();
+      ctx.strokeStyle='#1F6FEB';ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle='#1F6FEB';ctx.textBaseline='middle';ctx.fillText(lbl,mx,my);
+      ctx.restore();
+    }
+
+    const HIT=36*SC*0.65;
+    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+
+    function isWireless(type){return type==='laptop'||type==='phone';}
+    function isWired(type){return type==='router'||type==='pc'||type==='switch';}
+
+    function draw(){
+      if(!canvas.width||!canvas.height)return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(100,140,200,0.07)';
+      for(let x=24;x<canvas.width;x+=32)for(let y=24;y<canvas.height;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+
+      const ap=devices.find(d=>d.type==='ap');
+
+      // Wi-Fi coverage rings
+      if(ap) drawWifiRings(ap,animT);
+
+      // Cables
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
+        const hasAP=a.type==='ap'||b.type==='ap';
+        const other=a.type==='ap'?b:a;
+        if(hasAP&&isWireless(other.type)) drawWirelessLink(a,b,animT);
+        else drawWiredLink(a,b);
+
+        // Wi-Fi signal bars on wireless devices
+        if(hasAP&&isWireless(other.type)) drawSignalBars(other,3);
+      });
+
+      // SSID popup
+      if(selected&&selected.type==='ap') drawSSIDPopup(selected);
+
+      // Devices
+      devices.forEach(d=>{
+        const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
+        if(isSel){ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();ctx.arc(d.x,d.y,HIT+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
+        ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
+        const lbl=d.customLabel||def.label;
+        const ly=d.y+HIT*0.78;
+        ctx.font='bold 10px system-ui';ctx.textAlign='center';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(8,14,28,0.92)';rr(ctx,d.x-tw/2-6,ly-9,tw+12,18,3);ctx.fill();
+        ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(lbl,d.x,ly);
+      });
+    }
+
+    function animate(){animT+=0.016;if(devices.length>0)draw();requestAnimationFrame(animate);}
+    animate();
+
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved)del(d);},700);}}
+    function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
+    function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
+    canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+    function tap(x,y){
+      const d=hit(x,y);
+      if(d){
+        if(selected&&selected.id!==d.id){
+          if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+            cables.push({a:selected.id,b:d.id});
+            document.getElementById('hint').style.display='none';
+            const a=selected,b=d;
+            const hasAP=a.type==='ap'||b.type==='ap';
+            const other=a.type==='ap'?b:a;
+            if(hasAP&&isWireless(other.type)) setInfo('📶','Connected via Wi-Fi!',other.customLabel||DEFS[other.type].label+' joined NetworkLab_WiFi — dashed line = wireless link.');
+            else setInfo('🔗','Connected via Ethernet!',DEFS[a.type].label+' ↔ '+DEFS[b.type].label+' — solid line = wired connection.');
+          }
+          selected=null;
+        } else {
+          selected=d;
+          const icons={ap:'📶',router:'🔀',laptop:'💻',phone:'📱',pc:'🖥️'};
+          setInfo(icons[d.type]||'📶',d.customLabel||DEFS[d.type].label,DEFS[d.type].info+(d.type==='ap'?' Tap to see SSID details.':''));
+        }
+      } else {
+        selected=null;
+        setInfo('📶','Access Point Lab','Tap AP to see SSID. Connect wireless devices (Laptop/Phone) to AP with dashed Wi-Fi links.');
+      }
+      draw();
+    }
+
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id)selected=null;draw();}
+    function addDevice(type){
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,customLabel:DEFS[type].label,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
+      devices.push(dev);draw();
+    }
+
+    function loadDemo(){
+      clearAll();
+      document.getElementById('hint').style.display='none';
+      const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+
+      // Router on left (wired)
+      const routerId=nextId++;
+      devices.push({id:routerId,type:'router',customLabel:'Router',x:cx-W*0.32,y:cy});
+
+      // AP in center
+      const apId=nextId++;
+      devices.push({id:apId,type:'ap',customLabel:'Access Point',x:cx,y:cy});
+
+      // Wired cable: router → AP
+      cables.push({a:routerId,b:apId});
+
+      // Wireless clients arranged around AP
+      const clients=[
+        {type:'laptop',label:'Laptop 1',  angle:-110,dist:0.28},
+        {type:'phone', label:'Phone 1',   angle:-55, dist:0.26},
+        {type:'phone', label:'Phone 2',   angle:0,   dist:0.26},
+        {type:'laptop',label:'Laptop 2',  angle:55,  dist:0.28},
+        {type:'phone', label:'Phone 3',   angle:110, dist:0.26},
+      ];
+
+      clients.forEach(c=>{
+        const rad=c.angle*Math.PI/180;
+        const id=nextId++;
+        const dist=Math.min(W,H)*c.dist;
+        devices.push({id,type:c.type,customLabel:c.label,x:cx+Math.cos(rad)*dist,y:cy+Math.sin(rad)*dist});
+        cables.push({a:apId,b:id});
+      });
+
+      setInfo('📶','Access Point — Wi-Fi Bridge','Tap the AP to see SSID settings. 📶 Dashed = wireless  |  — Solid = Ethernet (PoE)');
+      draw();
+    }
+
+    function clearAll(){devices=[];cables=[];selected=null;document.getElementById('hint').style.display='flex';setInfo('📶','Access Point Lab','Tap Demo or add devices manually.');draw();}
+    function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
+    function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
+
+    window.addEventListener('resize',resize);
+    window.addEventListener('load',()=>setTimeout(resize,200));
+    setTimeout(resize,300);
+</script>
+</body>
+</html>
