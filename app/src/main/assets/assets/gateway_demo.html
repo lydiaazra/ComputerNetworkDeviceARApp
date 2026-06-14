@@ -8,20 +8,26 @@
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
         html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
         body{display:flex;flex-direction:column}
-        .topbar{background:#161B22;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
         .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
         .title{color:#fff;font-size:14px;font-weight:600;flex:1}
-        .mode-btn{background:#1F6FEB;border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
         .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
         .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
         .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
         .chip:active{background:#388BFD22;border-color:#1F6FEB}
         .canvas-wrap{flex:1;position:relative;overflow:hidden}
         #canvas{display:block;touch-action:none}
-        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
         .hint-icon{font-size:36px;margin-bottom:8px}
         .hint-text{color:#8FA5C3;font-size:13px}
-        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#F85149;color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#F8514922;color:#FF8FA0;border:1px solid #F8514944}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
         .info-icon{font-size:20px}
         .info-text{flex:1}
         .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
@@ -32,29 +38,31 @@
 <div class="topbar" id="topbar">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <span class="title">🌐 Gateway — Interactive Lab</span>
-    <button class="mode-btn" onclick="loadDemo()">Demo</button>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
 </div>
-<div class="toolbar" id="toolbar">
+<div class="toolbar" id="toolbar" style="display:none">
     <span class="tb-label">ADD:</span>
     <div class="chip" onclick="addDevice('internet')">☁️ Internet</div>
-    <div class="chip" onclick="addDevice('gateway')">🧱 Gateway</div>
+    <div class="chip" onclick="addDevice('gateway')">🌐 Gateway</div>
     <div class="chip" onclick="addDevice('switch')">🔌 Switch</div>
     <div class="chip" onclick="addDevice('server')">🖥️ Server</div>
     <div class="chip" onclick="addDevice('pc')">💻 PC</div>
     <div class="chip" onclick="clearAll()">🗑️ Clear</div>
 </div>
-<div class="canvas-wrap" id="wrap">
+<div class="canvas-wrap">
     <canvas id="canvas"></canvas>
     <div class="hint" id="hint">
         <div class="hint-icon">🌐</div>
-        <div class="hint-text">Tap "Demo" to see how a Gateway works<br>or add devices manually</div>
+        <div class="hint-text">Add devices from the toolbar<br>then tap two devices to connect them</div>
     </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap a device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
 </div>
 <div class="info-bar" id="infobar">
     <span class="info-icon" id="infoIcon">🌐</span>
     <div class="info-text">
         <div class="info-title" id="infoTitle">Gateway Lab</div>
-        <div class="info-sub"  id="infoSub">Tap a device to learn. Tap two to connect. Long-press to delete.</div>
+        <div class="info-sub" id="infoSub">🔴 WAN → 🟡 Protocol translation → 🟢 LAN. Tap "Try It" to build your own!</div>
     </div>
 </div>
 
@@ -62,28 +70,46 @@
     const canvas=document.getElementById('canvas');
     const ctx=canvas.getContext('2d');
     const SC=1.6;
+    let isDemoMode=true;
+    let pcCount=0;
 
-    // ── Resize canvas to fill wrap exactly ────────────────────────────────────
     function resize(){
-      const totalH   = window.innerHeight;
-      const topH     = document.getElementById('topbar').getBoundingClientRect().height;
-      const toolH    = document.getElementById('toolbar').getBoundingClientRect().height;
-      const infoH    = document.getElementById('infobar').getBoundingClientRect().height;
-      canvas.width   = window.innerWidth;
-      canvas.height  = Math.max(100, totalH - topH - toolH - infoH);
-      draw();
+      const th=document.getElementById('topbar').getBoundingClientRect().height;
+      const tbh=document.getElementById('toolbar').getBoundingClientRect().height;
+      const ih=document.getElementById('infobar').getBoundingClientRect().height;
+      canvas.width=window.innerWidth;
+      canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
+      if(isDemoMode) loadDemo(); else draw();
     }
 
-    // ── Device definitions ────────────────────────────────────────────────────
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('🌐','Try It!','Add Internet, Gateway, Switch and PCs — connect them to see how traffic flows through the Gateway.');
+      }
+    }
+
     const DEFS={
-      internet:{ label:'Internet',    color:'#58A6FF', info:'The global network. External traffic originates here.' },
-      gateway: { label:'Gateway',     color:'#F85149', info:'Translates protocols between LAN and the Internet.' },
-      switch:  { label:'Switch',      color:'#3EC26E', info:'Distributes data within the internal network by MAC address.' },
-      server:  { label:'Web Server',  color:'#388BFD', info:'Hosts services accessible to internal devices.' },
-      pc:      { label:'Workstation', color:'#7EDCFF', info:'End-user device. Reaches internet through the gateway.' }
+      internet:{label:'Internet',   color:'#58A6FF',info:'The global network. External traffic originates here and is routed through the Gateway.'},
+      gateway: {label:'Gateway',    color:'#F85149',info:'Translates protocols between the LAN and the Internet. Acts as the default route for all outbound traffic.'},
+      switch:  {label:'Switch',     color:'#3EC26E',info:'Distributes data within the internal LAN by MAC address.'},
+      server:  {label:'Web Server', color:'#388BFD',info:'Hosts internal services accessible to devices on the LAN.'},
+      pc:      {label:'PC',         color:'#7EDCFF',info:'End-user device. Reaches the internet through the Gateway as its default gateway IP.'}
     };
 
-    // ── Draw helpers ──────────────────────────────────────────────────────────
     function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
 
     function drawDev(d){
@@ -121,7 +147,19 @@
       ctx.restore();
     }
 
-    const HIT=36*SC*0.65;
+    function pktCol(a,b){
+      const t=[a.type,b.type];
+      if(t.includes('internet')&&t.includes('gateway'))return'#FF6B6B';
+      if(t.includes('gateway')&&t.includes('switch'))return'#FFB300';
+      return'#00FF88';
+    }
+
+    function cableLbl(a,b){
+      const t=[a.type,b.type];
+      if(t.includes('internet')&&t.includes('gateway'))return{txt:'🔴 WAN Traffic',col:'#FF6B6B'};
+      if(t.includes('gateway')&&t.includes('switch'))return{txt:'🟡 Protocol Translation',col:'#FFB300'};
+      return{txt:'🟢 LAN',col:'#00FF88'};
+    }
 
     function drawCable(a,b){
       const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
@@ -134,18 +172,24 @@
       ctx.restore();
     }
 
-    function pktCol(a,b){const t=[a.type,b.type];if(t.includes('internet')&&t.includes('gateway'))return'#FF6B6B';if(t.includes('gateway')&&t.includes('switch'))return'#FFB300';return'#00FF88';}
-    function lbl(a,b){const t=[a.type,b.type];if(t.includes('internet')&&t.includes('gateway'))return{txt:'WAN Traffic',col:'#FF6B6B'};if(t.includes('gateway')&&t.includes('switch'))return{txt:'Protocol Translation',col:'#FFB300'};return{txt:'LAN',col:'#00FF88'};}
+    function drawConnectRing(d,t){
+      const r=HIT+10+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle=DEFS[d.type].color;ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+    }
 
-    // ─── State ────────────────────────────────────────────────────────────────
+    const HIT=36*SC*0.65;
     let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
 
     function draw(){
       if(!canvas.width||!canvas.height)return;
-      const W=canvas.width,H=canvas.height;
-      ctx.clearRect(0,0,W,H);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.fillStyle='rgba(100,140,200,0.07)';
-      for(let x=24;x<W;x+=32)for(let y=24;y<H;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+      for(let x=24;x<canvas.width;x+=32)for(let y=24;y<canvas.height;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
 
       cables.forEach(c=>{
         const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
@@ -158,7 +202,7 @@
           ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1.5;ctx.stroke();
         });
         const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-40;
-        const{txt,col}=lbl(a,b);
+        const{txt,col}=cableLbl(a,b);
         ctx.save();ctx.font='bold 10px system-ui';ctx.textAlign='center';
         const tw=ctx.measureText(txt).width;
         ctx.fillStyle='rgba(13,17,23,0.92)';rr(ctx,mx-tw/2-8,my-11,tw+16,22,6);ctx.fill();
@@ -167,26 +211,27 @@
         ctx.restore();
       });
 
+      if(selected) drawConnectRing(selected,animT);
+
       devices.forEach(d=>{
         const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
-        if(isSel){ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();ctx.arc(d.x,d.y,HIT+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
-        ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;
-        drawDev(d);ctx.restore();
+        ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
+        const lbl=d.customLabel||def.label;
         const ly=d.y+HIT*0.78;
         ctx.font='bold 11px system-ui';ctx.textAlign='center';
-        const tw=ctx.measureText(def.label).width;
+        const tw=ctx.measureText(lbl).width;
         ctx.fillStyle='rgba(13,17,23,0.92)';rr(ctx,d.x-tw/2-6,ly-9,tw+12,18,3);ctx.fill();
         ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
-        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(def.label,d.x,ly);
+        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(lbl,d.x,ly);
       });
     }
 
     function animate(){animT+=0.04;if(devices.length>0)draw();requestAnimationFrame(animate);}
     animate();
 
-    function cp(e){const r=canvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
     function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
-    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved)del(d);},700);}}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)del(d);},700);}}
     function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
     function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
     canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
@@ -194,56 +239,69 @@
     canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
     canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
 
+    const ICONS={internet:'☁️',gateway:'🌐',switch:'🔌',server:'🖥️',pc:'💻'};
+
     function tap(x,y){
       const d=hit(x,y);
       if(d){
         if(selected&&selected.id!==d.id){
-          if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
-            cables.push({a:selected.id,b:d.id});
-            document.getElementById('hint').style.display='none';
-            setInfo('🔗','Connected!',DEFS[selected.type].label+' ↔ '+DEFS[d.type].label);
+          if(!isDemoMode){
+            if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!',(selected.customLabel||DEFS[selected.type].label)+' ↔ '+(d.customLabel||DEFS[d.type].label));
+            }
           }
-          selected=null;
+          selected=null;showBanner(false);
         } else {
           selected=d;
-          setInfo({internet:'☁️',gateway:'🧱',switch:'🔌',server:'🖥️',pc:'💻'}[d.type],DEFS[d.type].label,DEFS[d.type].info);
+          if(!isDemoMode) showBanner(true);
+          setInfo(ICONS[d.type]||'🌐',d.customLabel||DEFS[d.type].label,DEFS[d.type].info+(isDemoMode?'':' Tap another device to connect.'));
         }
       } else {
-        selected=null;
-        setInfo('🌐','Gateway Lab','Tap device to select. Tap another to connect. Long-press to delete.');
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('🌐','Gateway Lab','🔴 WAN → 🟡 Protocol Translation → 🟢 LAN. Tap "Try It" to build your own!');
+        else setInfo('🌐','Try Mode','Add Internet, Gateway, Switch & PCs — connect them to see traffic flow.');
       }
       draw();
     }
 
-    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id)selected=null;draw();}
-    function addDevice(type){document.getElementById('hint').style.display='none';devices.push({id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60});draw();}
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();}
+
+    function addDevice(type){
+      if(isDemoMode)return;
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
+      if(type==='pc'){dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;}
+      else dev.customLabel=DEFS[type].label;
+      devices.push(dev);draw();
+    }
 
     function loadDemo(){
-      clearAll();
+      devices=[];cables=[];selected=null;showBanner(false);
       document.getElementById('hint').style.display='none';
       const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,dx=W*0.21;
       devices=[
-        {id:nextId++,type:'internet',x:cx-dx*1.7,y:cy},
-        {id:nextId++,type:'gateway', x:cx-dx*0.55,y:cy},
-        {id:nextId++,type:'switch',  x:cx+dx*0.55,y:cy},
-        {id:nextId++,type:'server',  x:cx+dx*1.7,y:cy-H*0.24},
-        {id:nextId++,type:'pc',      x:cx+dx*1.7,y:cy},
-        {id:nextId++,type:'pc',      x:cx+dx*1.7,y:cy+H*0.24},
+        {id:nextId++,type:'internet',customLabel:'Internet',  x:cx-dx*1.7,y:cy},
+        {id:nextId++,type:'gateway', customLabel:'Gateway',   x:cx-dx*0.55,y:cy},
+        {id:nextId++,type:'switch',  customLabel:'Switch',    x:cx+dx*0.55,y:cy},
+        {id:nextId++,type:'server',  customLabel:'Web Server',x:cx+dx*1.7,y:cy-H*0.24},
+        {id:nextId++,type:'pc',      customLabel:'PC A',      x:cx+dx*1.7,y:cy},
+        {id:nextId++,type:'pc',      customLabel:'PC B',      x:cx+dx*1.7,y:cy+H*0.24},
       ];
       const ids=devices.map(d=>d.id);
       cables=[{a:ids[0],b:ids[1]},{a:ids[1],b:ids[2]},{a:ids[2],b:ids[3]},{a:ids[2],b:ids[4]},{a:ids[2],b:ids[5]}];
-      setInfo('🌐','Gateway — Network Bridge','🔴 WAN → 🟡 Protocol translation → 🟢 LAN distribution');
+      setInfo('🌐','Gateway — Network Bridge','🔴 WAN → 🟡 Protocol Translation → 🟢 LAN distribution. Tap "Try It" to build your own!');
       draw();
     }
 
-    function clearAll(){devices=[];cables=[];selected=null;document.getElementById('hint').style.display='flex';setInfo('🌐','Gateway Lab','Tap Demo or add devices manually.');draw();}
+    function clearAll(){devices=[];cables=[];selected=null;pcCount=0;showBanner(false);draw();}
     function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
     function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
 
     window.addEventListener('resize',resize);
-    // Wait for layout then size canvas
-    window.addEventListener('load',()=>setTimeout(resize,200));
-    setTimeout(resize,300);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
 </script>
 </body>
 </html>

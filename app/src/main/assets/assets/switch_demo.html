@@ -8,20 +8,26 @@
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
         html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
         body{display:flex;flex-direction:column}
-        .topbar{background:#161B22;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
         .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
         .title{color:#fff;font-size:14px;font-weight:600;flex:1}
-        .mode-btn{background:#1F6FEB;border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
         .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
         .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
         .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
         .chip:active{background:#388BFD22;border-color:#1F6FEB}
         .canvas-wrap{flex:1;position:relative;overflow:hidden}
         #canvas{display:block;touch-action:none}
-        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
         .hint-icon{font-size:36px;margin-bottom:8px}
         .hint-text{color:#8FA5C3;font-size:13px}
-        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#3EC26E;color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#3EC26E22;color:#3EC26E;border:1px solid #3EC26E44}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
         .info-icon{font-size:20px}
         .info-text{flex:1}
         .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
@@ -32,9 +38,9 @@
 <div class="topbar" id="topbar">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <span class="title">🔌 Switch — Interactive Lab</span>
-    <button class="mode-btn" onclick="loadDemo()">Demo</button>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
 </div>
-<div class="toolbar" id="toolbar">
+<div class="toolbar" id="toolbar" style="display:none">
     <span class="tb-label">ADD:</span>
     <div class="chip" onclick="addDevice('switch')">🔌 Switch</div>
     <div class="chip" onclick="addDevice('pc')">💻 PC</div>
@@ -44,14 +50,16 @@
     <canvas id="canvas"></canvas>
     <div class="hint" id="hint">
         <div class="hint-icon">🔌</div>
-        <div class="hint-text">Tap "Demo" to see how a Switch delivers data<br>only to the intended device</div>
+        <div class="hint-text">Add a Switch and PCs from the toolbar<br>then tap two PCs to send a frame</div>
     </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap another device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
 </div>
 <div class="info-bar" id="infobar">
     <span class="info-icon" id="infoIcon">🔌</span>
     <div class="info-text">
         <div class="info-title" id="infoTitle">Switch Lab</div>
-        <div class="info-sub" id="infoSub">Tap the Switch to see its MAC table. Tap a PC to send a frame — only the destination receives it!</div>
+        <div class="info-sub" id="infoSub">Tap the Switch to see its MAC table. Tap PC → PC to see direct frame switching!</div>
     </div>
 </div>
 
@@ -59,6 +67,7 @@
     const canvas=document.getElementById('canvas');
     const ctx=canvas.getContext('2d');
     const SC=1.6;
+    let isDemoMode=true;
 
     function resize(){
       const th=document.getElementById('topbar').getBoundingClientRect().height;
@@ -66,14 +75,34 @@
       const ih=document.getElementById('infobar').getBoundingClientRect().height;
       canvas.width=window.innerWidth;
       canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
-      draw();
+      if(isDemoMode) loadDemo(); else draw();
+    }
+
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('🔌','Try It!','Add a Switch and PCs, connect them, then tap PC → PC to see direct frame switching.');
+      }
     }
 
     function randomMAC(){return Array.from({length:6},()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase()).join(':');}
 
     const DEFS={
-      switch:{ label:'Switch', color:'#3EC26E', info:'Learns MAC addresses of connected devices. Forwards frames ONLY to the correct port — unlike a Hub which broadcasts to all.' },
-      pc:    { label:'PC',     color:'#7EDCFF', info:'Connected to the switch. Only receives frames addressed to its own MAC address.' }
+      switch:{label:'Switch',color:'#3EC26E',info:'Learns MAC addresses of connected devices. Forwards frames ONLY to the correct port.'},
+      pc:    {label:'PC',    color:'#7EDCFF',info:'Only receives frames addressed to its own MAC address.'}
     };
 
     function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
@@ -104,10 +133,8 @@
       ctx.restore();
     }
 
-    // MAC address table popup
-    function drawMACTable(sw, pcs){
-      const bw=200,bh=30+pcs.length*18+10;
-      const bx=sw.x+48,by=sw.y-bh/2;
+    function drawMACTable(sw,pcs){
+      const bw=220,bh=30+pcs.length*18+10,bx=sw.x+48,by=sw.y-bh/2;
       ctx.save();
       ctx.fillStyle='rgba(8,20,12,0.97)';rr(ctx,bx,by,bw,bh,10);ctx.fill();
       ctx.strokeStyle='#3EC26E';ctx.lineWidth=1.5;ctx.stroke();
@@ -116,27 +143,36 @@
       ctx.strokeStyle='#3EC26E44';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(bx+8,by+22);ctx.lineTo(bx+bw-8,by+22);ctx.stroke();
       ctx.fillStyle='#8FA5C3';ctx.font='8px system-ui';
-      ctx.fillText('Port',bx+10,by+26);ctx.fillText('MAC Address',bx+46,by+26);
+      ctx.fillText('Device',bx+10,by+26);
+      ctx.fillText('MAC Address',bx+60,by+26);
       pcs.forEach((pc,i)=>{
         ctx.fillStyle='#FFD040';ctx.font='8px monospace';
-        ctx.fillText('P'+(i+1),bx+10,by+38+i*18);
+        ctx.fillText(pc.customLabel||'PC '+(i+1),bx+10,by+38+i*18);
         ctx.fillStyle='#C9D1D9';
-        ctx.fillText(pc.mac||'--:--:--:--:--:--',bx+46,by+38+i*18);
+        ctx.fillText(pc.mac||'--:--:--:--:--:--',bx+60,by+38+i*18);
       });
       ctx.restore();
     }
 
-    // ── Switching animation ───────────────────────────────────────────────────
-    let switchAnim=null; // {from, to, phase, t}
+    function drawConnectRing(d,t){
+      const r=HIT+10+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle='#3EC26E';ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+    }
 
-    function triggerSwitch(fromPC, toPC){
-      switchAnim={from:fromPC, to:toPC, phase:1, t:0};
-      setInfo('🔌','Switching Frame','📤 '+fromPC.customLabel+' → Switch → 📥 '+toPC.customLabel+' only! Other PCs are ignored.');
+    let switchAnim=null;
+
+    function triggerSwitch(fromPC,toPC){
+      switchAnim={from:fromPC,to:toPC,phase:1,t:0};
+      setInfo('🔌','Switching Frame','📤 '+fromPC.customLabel+' → Switch → 📥 '+toPC.customLabel+' only! Other PCs are blocked.');
     }
 
     const HIT=36*SC*0.65;
+    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0,pcCount=0;
 
-    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
 
     function draw(){
       if(!canvas.width||!canvas.height)return;
@@ -147,29 +183,22 @@
       const sw=devices.find(d=>d.type==='switch');
       const pcs=devices.filter(d=>d.type==='pc');
 
-      // Draw cables — highlight active ones during animation
       cables.forEach(c=>{
         const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
         const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
         const ux=dx/len,uy=dy/len,g=HIT*0.88;
-
-        // Check if this cable is active during animation
         let isActive=false,isBlocked=false;
         if(switchAnim&&sw){
           const ids=[a.id,b.id];
-          if(switchAnim.phase===1){
-            isActive=ids.includes(switchAnim.from.id)&&ids.includes(sw.id);
-          } else if(switchAnim.phase===2){
+          if(switchAnim.phase===1) isActive=ids.includes(switchAnim.from.id)&&ids.includes(sw.id);
+          else if(switchAnim.phase===2){
             isActive=ids.includes(sw.id)&&ids.includes(switchAnim.to.id);
             isBlocked=ids.includes(sw.id)&&!ids.includes(switchAnim.to.id)&&!ids.includes(switchAnim.from.id);
           }
         }
-
         const col=isActive?'#00FF88':isBlocked?'#FF444433':'#3EC26E44';
         ctx.save();ctx.strokeStyle=col;ctx.lineWidth=isActive?3:2;
         ctx.beginPath();ctx.moveTo(a.x+ux*g,a.y+uy*g);ctx.lineTo(b.x-ux*g,b.y-uy*g);ctx.stroke();
-
-        // Blocked label
         if(isBlocked){
           const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
           ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,mx-22,my-10,44,20,5);ctx.fill();
@@ -180,37 +209,28 @@
         ctx.restore();
       });
 
-      // Switching animation
       if(switchAnim&&sw){
         switchAnim.t+=0.02;
-
         if(switchAnim.phase===1){
-          // Frame going from sender to switch
           const p=Math.min(switchAnim.t,1);
           const px=switchAnim.from.x+(sw.x-switchAnim.from.x)*p;
           const py=switchAnim.from.y+(sw.y-switchAnim.from.y)*p;
-          ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);
-          ctx.fillStyle='#00FF88';ctx.fill();
+          ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fillStyle='#00FF88';ctx.fill();
           ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
-          // Frame label
           ctx.save();ctx.font='bold 8px system-ui';ctx.textAlign='center';
-          const fl='Frame →'+switchAnim.to.customLabel;
+          const fl='Frame → '+switchAnim.to.customLabel;
           const tw=ctx.measureText(fl).width;
           ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,px-tw/2-5,py-22,tw+10,16,4);ctx.fill();
           ctx.strokeStyle='#00FF88';ctx.lineWidth=1;ctx.stroke();
           ctx.fillStyle='#00FF88';ctx.textBaseline='middle';ctx.fillText(fl,px,py-14);
           ctx.restore();
           if(p>=1){switchAnim.phase=2;switchAnim.t=0;}
-
         } else if(switchAnim.phase===2){
-          // Frame going from switch to ONLY destination
           const p=Math.min(switchAnim.t,1);
           const px=sw.x+(switchAnim.to.x-sw.x)*p;
           const py=sw.y+(switchAnim.to.y-sw.y)*p;
-          ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);
-          ctx.fillStyle='#00FF88';ctx.fill();
+          ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fillStyle='#00FF88';ctx.fill();
           ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
-          // "Direct delivery" label on destination
           if(p>0.7){
             ctx.save();ctx.font='bold 9px system-ui';ctx.textAlign='center';
             const lbl='✅ Direct delivery!';const tw=ctx.measureText(lbl).width;
@@ -219,17 +239,20 @@
             ctx.fillStyle='#00FF88';ctx.textBaseline='middle';ctx.fillText(lbl,switchAnim.to.x,switchAnim.to.y-HIT-19);
             ctx.restore();
           }
-          if(p>=1){switchAnim=null;setInfo('🔌','Switch','Tap a PC to send a frame. Only the destination receives it!');}
+          if(p>=1){switchAnim=null;setInfo('🔌','Switch','Tap a PC then another PC to send a frame directly!');}
         }
       }
 
-      // MAC table when switch selected
-      if(selected&&selected.type==='switch'&&pcs.length>0) drawMACTable(selected,pcs);
+      // ✅ MAC table shows connected PCs with correct names
+      if(selected&&selected.type==='switch'){
+        const connectedPcs=pcs.filter(pc=>cables.find(c=>(c.a===pc.id||c.b===pc.id)&&(c.a===(sw&&sw.id)||c.b===(sw&&sw.id))));
+        if(connectedPcs.length>0) drawMACTable(selected,connectedPcs);
+      }
 
-      // Devices
+      if(selected) drawConnectRing(selected,animT);
+
       devices.forEach(d=>{
         const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
-        if(isSel){ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();ctx.arc(d.x,d.y,HIT+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
         ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
         const lbl=d.customLabel||def.label;
         const ly=d.y+HIT*0.78;
@@ -244,9 +267,9 @@
     function animate(){animT+=0.016;if(devices.length>0)draw();requestAnimationFrame(animate);}
     animate();
 
-    function cp(e){const r=canvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
     function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
-    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved)del(d);},700);}}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)del(d);},700);}}
     function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
     function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
     canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
@@ -254,79 +277,81 @@
     canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
     canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
 
-    let pendingSender=null;
     function tap(x,y){
       const d=hit(x,y);
       if(d){
         if(selected&&selected.id!==d.id){
+          // PC → PC: trigger switch animation in both modes
           if(d.type==='pc'&&selected.type==='pc'){
-            // Check both are connected to a switch
             const sw=devices.find(dev=>dev.type==='switch');
             if(sw) triggerSwitch(selected,d);
-            selected=null;return;
+            selected=null;showBanner(false);return;
           }
-          if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
-            cables.push({a:selected.id,b:d.id});
-            document.getElementById('hint').style.display='none';
-            setInfo('🔗','Connected!','Tap the Switch to see its MAC table. Tap a PC then another PC to send a frame.');
+          // Try mode: connect devices
+          if(!isDemoMode){
+            if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!','Tap Switch to see MAC table. Tap PC → PC to send a frame.');
+            }
           }
-          selected=null;
+          selected=null;showBanner(false);
         } else {
           selected=d;
-          if(d.type==='switch') setInfo('🔌','Switch — MAC Table','Seeing all connected MAC addresses. Switch learns which device is on which port.');
-          else setInfo('💻',d.customLabel||'PC','Tap another PC to send a frame directly to it — only that PC will receive it!');
+          if(!isDemoMode) showBanner(true);
+          if(d.type==='switch') setInfo('🔌',d.customLabel||'Switch','MAC Address Table shows all connected devices. Switch forwards frames only to the correct port.');
+          else setInfo('💻',d.customLabel||'PC','Tap another PC to send a frame — only that PC receives it!'+(isDemoMode?'':' Or tap Switch to connect.'));
         }
       } else {
-        selected=null;
-        setInfo('🔌','Switch Lab','Tap Switch for MAC table. Tap PC → tap another PC to demo direct switching.');
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('🔌','Switch Lab','Tap any device to learn. Tap PC → PC to trigger switching. Tap "Try It" to build your own!');
+        else setInfo('🔌','Try Mode','Add Switch & PCs, connect them, then tap PC → PC to see direct switching.');
       }
       draw();
     }
 
-    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id)selected=null;draw();}
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();}
+
     function addDevice(type){
+      if(isDemoMode)return;
       document.getElementById('hint').style.display='none';
       const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
-      if(type==='pc'){dev.mac=randomMAC();dev.customLabel='PC';}
+      // ✅ Auto-number PCs with unique names and MAC addresses
+     if(type==='pc'){dev.mac=randomMAC();dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;}
       devices.push(dev);draw();
     }
 
     function loadDemo(){
-      clearAll();
+      devices=[];cables=[];selected=null;switchAnim=null;showBanner(false);
       document.getElementById('hint').style.display='none';
       const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
       const r=Math.min(W,H)*0.34;
-
       const swId=nextId++;
       devices.push({id:swId,type:'switch',customLabel:'Switch',x:cx,y:cy});
-
       const angles=[-90,-18,54,126,198].map(a=>a*Math.PI/180);
       const labels=['PC A','PC B','PC C','PC D','PC E'];
       const pcDevs=[];
       angles.forEach((angle,i)=>{
         const id=nextId++;
         const dev={id,type:'pc',customLabel:labels[i],mac:randomMAC(),x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
-        devices.push(dev);
-        pcDevs.push(dev);
+        devices.push(dev);pcDevs.push(dev);
         cables.push({a:swId,b:id});
       });
-
-      setInfo('🔌','Switch — Direct Delivery','Tap PC A then PC C to send a frame. Watch — only PC C receives it, others are blocked!');
+      setInfo('🔌','Switch — Direct Delivery','Tap PC A then PC C — only PC C receives it! Tap Switch to see MAC table. Tap "Try It" to build your own!');
       draw();
-
-      // Auto demo after 1s
-      setTimeout(()=>{
-        if(pcDevs.length>=2) triggerSwitch(pcDevs[0],pcDevs[2]);
-      },1000);
+      setTimeout(()=>{if(pcDevs.length>=2)triggerSwitch(pcDevs[0],pcDevs[2]);},1000);
     }
 
-    function clearAll(){devices=[];cables=[];selected=null;switchAnim=null;document.getElementById('hint').style.display='flex';setInfo('🔌','Switch Lab','Tap Demo or add devices manually.');draw();}
+    function clearAll(){
+      devices=[];cables=[];selected=null;switchAnim=null;pcCount=0;showBanner(false);draw();
+    }
+
     function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
     function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
 
     window.addEventListener('resize',resize);
-    window.addEventListener('load',()=>setTimeout(resize,200));
-    setTimeout(resize,300);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
 </script>
 </body>
 </html>

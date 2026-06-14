@@ -8,20 +8,26 @@
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
         html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
         body{display:flex;flex-direction:column}
-        .topbar{background:#161B22;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
         .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
         .title{color:#fff;font-size:14px;font-weight:600;flex:1}
-        .mode-btn{background:#1F6FEB;border:none;color:#fff;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
         .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
         .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
         .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
         .chip:active{background:#388BFD22;border-color:#1F6FEB}
         .canvas-wrap{flex:1;position:relative;overflow:hidden}
         #canvas{display:block;touch-action:none}
-        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
         .hint-icon{font-size:36px;margin-bottom:8px}
         .hint-text{color:#8FA5C3;font-size:13px}
-        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#C07020;color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#C0702022;color:#FFB300;border:1px solid #C0702044}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
         .info-icon{font-size:20px}
         .info-text{flex:1}
         .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
@@ -32,9 +38,9 @@
 <div class="topbar" id="topbar">
     <button class="back-btn" onclick="goBack()">← Back</button>
     <span class="title">📡 Hub — Interactive Lab</span>
-    <button class="mode-btn" onclick="loadDemo()">Demo</button>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
 </div>
-<div class="toolbar" id="toolbar">
+<div class="toolbar" id="toolbar" style="display:none">
     <span class="tb-label">ADD:</span>
     <div class="chip" onclick="addDevice('hub')">📡 Hub</div>
     <div class="chip" onclick="addDevice('pc')">💻 PC</div>
@@ -44,14 +50,16 @@
     <canvas id="canvas"></canvas>
     <div class="hint" id="hint">
         <div class="hint-icon">📡</div>
-        <div class="hint-text">Tap "Demo" to see how a Hub broadcasts data<br>or add devices manually</div>
+        <div class="hint-text">Add a Hub and PCs from the toolbar<br>connect them, then tap any PC to broadcast</div>
     </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap a device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
 </div>
 <div class="info-bar" id="infobar">
     <span class="info-icon" id="infoIcon">📡</span>
     <div class="info-text">
         <div class="info-title" id="infoTitle">Hub Lab</div>
-        <div class="info-sub" id="infoSub">Tap a device to learn. Tap two to connect. Long-press to delete.</div>
+        <div class="info-sub" id="infoSub">Tap any PC to trigger a broadcast. Watch data flood ALL devices simultaneously!</div>
     </div>
 </div>
 
@@ -59,6 +67,8 @@
     const canvas=document.getElementById('canvas');
     const ctx=canvas.getContext('2d');
     const SC=1.6;
+    let isDemoMode=true;
+    let pcCount=0;
 
     function resize(){
       const th=document.getElementById('topbar').getBoundingClientRect().height;
@@ -66,12 +76,32 @@
       const ih=document.getElementById('infobar').getBoundingClientRect().height;
       canvas.width=window.innerWidth;
       canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
-      draw();
+      if(isDemoMode) loadDemo(); else draw();
+    }
+
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('📡','Try It!','Add a Hub and PCs, connect them, then tap any PC to see the broadcast in action.');
+      }
     }
 
     const DEFS={
-      hub:{ label:'Hub', color:'#854F0B', info:'Broadcasts ALL incoming data to EVERY connected port. No filtering — creates a shared collision domain (Layer 1).' },
-      pc: { label:'PC',  color:'#7EDCFF', info:'Receives ALL data from the hub — even data not meant for it. This wastes bandwidth and reduces security.' }
+      hub:{label:'Hub',color:'#C07020',info:'Broadcasts ALL incoming data to EVERY connected port. No filtering — creates a shared collision domain (Layer 1).'},
+      pc: {label:'PC', color:'#7EDCFF',info:'Receives ALL data from the Hub — even data not meant for it. This wastes bandwidth and reduces security.'}
     };
 
     function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
@@ -80,20 +110,15 @@
       ctx.save();ctx.translate(d.x,d.y);ctx.scale(SC,SC);
       switch(d.type){
         case 'hub':
-          // Body
           ctx.fillStyle='#3A2008';rr(ctx,-28,-10,56,20,3);ctx.fill();
           ctx.fillStyle='#6A3810';rr(ctx,-26,-8,52,16,2);ctx.fill();
-          // Top face
           ctx.fillStyle='#8A5020';
           ctx.beginPath();ctx.moveTo(-26,-8);ctx.lineTo(-20,-16);ctx.lineTo(32,-16);ctx.lineTo(26,-8);ctx.closePath();ctx.fill();
-          // Side face
           ctx.fillStyle='#2A1804';
           ctx.beginPath();ctx.moveTo(26,-8);ctx.lineTo(32,-16);ctx.lineTo(32,2);ctx.lineTo(26,8);ctx.closePath();ctx.fill();
-          // Port grid
           for(let i=0;i<10;i++){
             ctx.fillStyle='#1A0C04';rr(ctx,-24+i*5,-4,4,4,1);ctx.fill();
-            ctx.fillStyle='#FFD040';
-            ctx.beginPath();ctx.arc(-22+i*5,-2,1.2,0,Math.PI*2);ctx.fill();
+            ctx.fillStyle='#FFD040';ctx.beginPath();ctx.arc(-22+i*5,-2,1.2,0,Math.PI*2);ctx.fill();
           }
           break;
         case 'pc':
@@ -106,35 +131,35 @@
       ctx.restore();
     }
 
-    const HIT=36*SC*0.65;
-
-    // ── Broadcast animation state ──────────────────────────────────────────────
-    let broadcastFrom=null; // which PC is currently "sending"
-    let broadcastT=0;       // 0..1 progress of broadcast animation
-    let broadcastTimer=null;
-
-    function triggerBroadcast(fromDev){
-      broadcastFrom=fromDev;
-      broadcastT=0;
+    function drawConnectRing(d,t){
+      const r=HIT+10+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle=DEFS[d.type].color;ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
     }
 
-    // ── Draw ──────────────────────────────────────────────────────────────────
-    function rr2(c,x,y,w,h,r){rr(c,x,y,w,h,r);}
-
+    const HIT=36*SC*0.65;
+    let broadcastFrom=null,broadcastT=0;
     let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
+    function triggerBroadcast(fromDev){broadcastFrom=fromDev;broadcastT=0;}
+    function isConnectedToHub(pc){
+      const hub=devices.find(d=>d.type==='hub');
+      return hub&&cables.find(c=>(c.a===pc.id||c.b===pc.id)&&(c.a===hub.id||c.b===hub.id));
+    }
 
     function draw(){
       if(!canvas.width||!canvas.height)return;
       ctx.clearRect(0,0,canvas.width,canvas.height);
-
-      // Grid
       ctx.fillStyle='rgba(100,140,200,0.07)';
       for(let x=24;x<canvas.width;x+=32)for(let y=24;y<canvas.height;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
 
       const hub=devices.find(d=>d.type==='hub');
       const pcs=devices.filter(d=>d.type==='pc');
 
-      // Draw cables
+      // Cables
       cables.forEach(c=>{
         const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
         const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
@@ -144,62 +169,44 @@
         ctx.restore();
       });
 
-      // ── Broadcast animation ───────────────────────────────────────────────
+      // Broadcast animation
       if(hub&&broadcastFrom&&broadcastT>=0){
-        const phase1End=0.35; // packet travels PC→Hub
-        const phase2End=1.0;  // hub broadcasts to ALL other PCs
-
+        const phase1End=0.35;
         if(broadcastT<phase1End){
-          // Phase 1: packet from sender to hub
           const p=broadcastT/phase1End;
           const px=broadcastFrom.x+(hub.x-broadcastFrom.x)*p;
           const py=broadcastFrom.y+(hub.y-broadcastFrom.y)*p;
-          ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);
-          ctx.fillStyle='#FFB300';ctx.fill();
+          ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fillStyle='#FFB300';ctx.fill();
           ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
-
-          // "Sending..." label on sender
           ctx.save();ctx.font='bold 9px system-ui';ctx.textAlign='center';
           const lbl='📤 Sending...';const tw=ctx.measureText(lbl).width;
           ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,broadcastFrom.x-tw/2-6,broadcastFrom.y-HIT-26,tw+12,18,5);ctx.fill();
           ctx.strokeStyle='#FFB300';ctx.lineWidth=1;ctx.stroke();
           ctx.fillStyle='#FFB300';ctx.textBaseline='middle';ctx.fillText(lbl,broadcastFrom.x,broadcastFrom.y-HIT-17);
           ctx.restore();
-
         } else {
-          // Phase 2: hub broadcasts to ALL PCs
-          const p=(broadcastT-phase1End)/(phase2End-phase1End);
-
-          // Draw broadcast ring around hub
+          const p=(broadcastT-phase1End)/(1.0-phase1End);
           ctx.save();
           ctx.strokeStyle='#FFB300'+(Math.floor((1-p)*255).toString(16).padStart(2,'0'));
           ctx.lineWidth=2;ctx.setLineDash([5,3]);
           ctx.beginPath();ctx.arc(hub.x,hub.y,p*HIT*3,0,Math.PI*2);ctx.stroke();
           ctx.setLineDash([]);ctx.restore();
-
-          // Packets from hub to each PC
           pcs.forEach(pc=>{
             const isSender=broadcastFrom&&pc.id===broadcastFrom.id;
-            const px=hub.x+(pc.x-hub.x)*p;
-            const py=hub.y+(pc.y-hub.y)*p;
+            const px=hub.x+(pc.x-hub.x)*p,py=hub.y+(pc.y-hub.y)*p;
             ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
             ctx.fillStyle=isSender?'#FF444488':'#FFD040';ctx.fill();
             ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.2;ctx.stroke();
-
-            // Label on each receiving PC
             if(p>0.7){
               const lbl=isSender?'📥 Own data':'📥 Received!';
               ctx.save();ctx.font='bold 9px system-ui';ctx.textAlign='center';
               const tw=ctx.measureText(lbl).width;
               ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,pc.x-tw/2-6,pc.y-HIT-26,tw+12,18,5);ctx.fill();
               ctx.strokeStyle=isSender?'#FF4444':'#FFD040';ctx.lineWidth=1;ctx.stroke();
-              ctx.fillStyle=isSender?'#FF4444':'#FFD040';ctx.textBaseline='middle';
-              ctx.fillText(lbl,pc.x,pc.y-HIT-17);
+              ctx.fillStyle=isSender?'#FF4444':'#FFD040';ctx.textBaseline='middle';ctx.fillText(lbl,pc.x,pc.y-HIT-17);
               ctx.restore();
             }
           });
-
-          // "Broadcast to ALL ports!" label on hub
           ctx.save();ctx.font='bold 9px system-ui';ctx.textAlign='center';
           const lbl='📢 Broadcast to ALL!';const tw=ctx.measureText(lbl).width;
           ctx.fillStyle='rgba(8,14,28,0.96)';rr(ctx,hub.x-tw/2-8,hub.y+HIT+4,tw+16,20,6);ctx.fill();
@@ -207,22 +214,21 @@
           ctx.fillStyle='#FFB300';ctx.textBaseline='middle';ctx.fillText(lbl,hub.x,hub.y+HIT+14);
           ctx.restore();
         }
-
         broadcastT+=0.012;
         if(broadcastT>1.2){broadcastT=0;broadcastFrom=null;}
       }
 
-      // Auto-trigger broadcast in demo mode
-      if(hub&&pcs.length>=2&&!broadcastFrom&&cables.length>=2){
+      // Auto-trigger in demo mode only
+      if(isDemoMode&&hub&&pcs.length>=2&&!broadcastFrom&&cables.length>=2){
         if(Math.floor(animT*60)%180===0){
           triggerBroadcast(pcs[Math.floor(Math.random()*pcs.length)]);
         }
       }
 
-      // Devices
+      if(selected) drawConnectRing(selected,animT);
+
       devices.forEach(d=>{
         const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
-        if(isSel){ctx.save();ctx.strokeStyle=def.color;ctx.lineWidth=2.5;ctx.setLineDash([5,3]);ctx.beginPath();ctx.arc(d.x,d.y,HIT+8,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore();}
         ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
         const lbl=d.customLabel||def.label;
         const ly=d.y+HIT*0.78;
@@ -237,9 +243,9 @@
     function animate(){animT+=0.016;if(devices.length>0)draw();requestAnimationFrame(animate);}
     animate();
 
-    function cp(e){const r=canvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
     function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
-    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved)del(d);},700);}}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)del(d);},700);}}
     function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
     function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
     canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
@@ -251,63 +257,81 @@
       const d=hit(x,y);
       if(d){
         if(selected&&selected.id!==d.id){
-          if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
-            cables.push({a:selected.id,b:d.id});
-            document.getElementById('hint').style.display='none';
-            setInfo('🔗','Connected!','Now tap another PC to see the Hub broadcast to ALL devices.');
+          // Try mode: connect selected → tapped device
+          if(!isDemoMode){
+            if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!','Tap any connected PC to trigger a broadcast to ALL devices!');
+            }
           }
-          selected=null;
+          selected=null;showBanner(false);
         } else {
           selected=d;
-          if(d.type==='pc'){triggerBroadcast(d);setInfo('💻',d.customLabel||'PC','Tap to send data — watch the Hub broadcast to ALL connected devices!');}
-          else setInfo('📡','Hub',DEFS.hub.info);
+          if(d.type==='pc'){
+            // ✅ Trigger broadcast if PC is connected to hub (both modes)
+            if(isConnectedToHub(d)){
+              triggerBroadcast(d);
+              showBanner(false);
+              setInfo('💻',d.customLabel||'PC','📢 Sending data — Hub broadcasts to ALL connected devices!');
+            } else {
+              // Not connected yet → connect mode
+              if(!isDemoMode) showBanner(true);
+              setInfo('💻',d.customLabel||'PC','Tap the Hub to connect this PC to the network.');
+            }
+          } else {
+            // Hub tapped
+            if(!isDemoMode) showBanner(true);
+            setInfo('📡',d.customLabel||'Hub',DEFS.hub.info+(isDemoMode?'':' Tap a PC to connect it.'));
+          }
         }
       } else {
-        selected=null;
-        setInfo('📡','Hub Lab','Tap a PC to trigger a broadcast. Watch data go to ALL devices!');
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('📡','Hub Lab','Tap any PC to trigger a broadcast. Watch data flood ALL devices! Tap "Try It" to build your own.');
+        else setInfo('📡','Try Mode','Add Hub & PCs, connect them, then tap any PC to see the broadcast.');
       }
       draw();
     }
 
-    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id)selected=null;draw();}
-    function addDevice(type){document.getElementById('hint').style.display='none';devices.push({id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60});draw();}
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();}
 
-    // ── Demo — star topology matching reference image ──────────────────────────
+    function addDevice(type){
+      if(isDemoMode)return;
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
+      if(type==='pc'){dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;}
+      if(type==='hub') dev.customLabel='Hub';
+      devices.push(dev);draw();
+    }
+
     function loadDemo(){
-      clearAll();
+      devices=[];cables=[];selected=null;broadcastFrom=null;showBanner(false);
       document.getElementById('hint').style.display='none';
       const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
       const r=Math.min(W,H)*0.34;
-
-      // Hub at center
       const hubId=nextId++;
       devices.push({id:hubId,type:'hub',customLabel:'HUB',x:cx,y:cy});
-
-      // 5 PCs arranged in a circle
       const angles=[-90,-26,54,126,198].map(a=>a*Math.PI/180);
-      const labels=['Connected Device 1','Connected Device 2','Connected Device 3','Connected Device 4','Connected Device 5'];
-      const pcIds=[];
+      const labels=['PC A','PC B','PC C','PC D','PC E'];
+      const pcDevs=[];
       angles.forEach((angle,i)=>{
         const id=nextId++;
-        devices.push({id,type:'pc',customLabel:labels[i],x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r});
-        pcIds.push(id);
+        const dev={id,type:'pc',customLabel:labels[i],x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r};
+        devices.push(dev);pcDevs.push(dev);
         cables.push({a:hubId,b:id});
       });
-
-      setInfo('📡','Hub — Broadcast Network','Tap any PC to send data. The Hub broadcasts it to ALL 5 devices simultaneously!');
+      setInfo('📡','Hub — Broadcast Network','Tap any PC to send data. The Hub broadcasts to ALL 5 devices simultaneously! Tap "Try It" to build your own.');
       draw();
-
-      // Auto-start broadcast
-      setTimeout(()=>triggerBroadcast(devices.find(d=>d.customLabel==='Connected Device 1')),800);
+      setTimeout(()=>triggerBroadcast(pcDevs[0]),800);
     }
 
-    function clearAll(){devices=[];cables=[];selected=null;broadcastFrom=null;document.getElementById('hint').style.display='flex';setInfo('📡','Hub Lab','Tap Demo or add devices manually.');draw();}
+    function clearAll(){devices=[];cables=[];selected=null;broadcastFrom=null;pcCount=0;showBanner(false);draw();}
     function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
     function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
 
     window.addEventListener('resize',resize);
-    window.addEventListener('load',()=>setTimeout(resize,200));
-    setTimeout(resize,300);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
 </script>
 </body>
 </html>

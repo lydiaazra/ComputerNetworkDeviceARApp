@@ -1,163 +1,284 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_main_gradient"
-    android:padding="24dp">
+    android:orientation="vertical"
+    android:background="#0B1026">
 
-    <View
-        android:id="@+id/topGlow"
-        android:layout_width="220dp"
-        android:layout_height="220dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="10dp"
-        android:background="@drawable/bg_glow_circle" />
+    <!-- Top glow + icon -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="140dp"
+        android:layout_marginTop="16dp">
 
-    <ImageView
-        android:id="@+id/imgMenuIcon"
-        android:layout_width="90dp"
-        android:layout_height="90dp"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="35dp"
-        android:src="@mipmap/ic_launcher"
-        android:scaleType="fitCenter" />
+        <View
+            android:layout_width="180dp"
+            android:layout_height="180dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="-20dp"
+            android:background="@drawable/bg_glow_circle"/>
 
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:src="@mipmap/ic_launcher"
+            android:scaleType="fitCenter"/>
+    </FrameLayout>
+
+    <!-- Title -->
     <TextView
-        android:id="@+id/tvMenuTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/imgMenuIcon"
-        android:layout_marginTop="20dp"
         android:text="Main Menu"
         android:textAlignment="center"
         android:textColor="#FFFFFF"
-        android:textSize="30sp"
-        android:textStyle="bold" />
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="6dp"/>
 
     <TextView
-        android:id="@+id/tvSubtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tvMenuTitle"
-        android:layout_marginTop="8dp"
         android:text="Choose a feature to continue your learning journey"
         android:textAlignment="center"
         android:textColor="#B7C9E6"
-        android:textSize="14sp"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp" />
+        android:textSize="13sp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:layout_marginBottom="20dp"/>
 
+    <!-- Menu card -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/tvSubtitle"
-        android:layout_marginTop="24dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:clipToPadding="false">
 
-        <LinearLayout
-            android:id="@+id/menuCard"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_info_card"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:padding="20dp">
+            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="#111830"
+            app:cardElevation="8dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAR"
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:text="AR Devices"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#4A67F5"
-                app:cornerRadius="14dp" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="8dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnDeviceDemo"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="10dp"
-                android:text="Device Demo"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#2A7A8A"
-                app:cornerRadius="14dp" />
+                <!-- AR Devices -->
+                <LinearLayout
+                    android:id="@+id/btnAR"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:layout_marginBottom="4dp">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_blue"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🔮" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="AR Devices"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnNetworkLab"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="10dp"
-                android:text="Interactive Lab"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#1E7A40"
-                app:cornerRadius="14dp" />
+                <!-- Device Demo -->
+                <LinearLayout
+                    android:id="@+id/btnDeviceDemo"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:layout_marginBottom="4dp">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_teal"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📱" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Device Demo"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnQuiz"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="10dp"
-                android:text="Quiz"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#4A67F5"
-                app:cornerRadius="14dp" />
+                <!-- Interactive Lab -->
+                <LinearLayout
+                    android:id="@+id/btnNetworkLab"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:layout_marginBottom="4dp">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_green"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🧪" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Interactive Lab"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnAvatar"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="10dp"
-                android:text="Avatar Assistant"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#4A67F5"
-                app:cornerRadius="14dp" />
+                <!-- Quiz -->
+                <LinearLayout
+                    android:id="@+id/btnQuiz"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:layout_marginBottom="4dp">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_blue"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🎯" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Quiz"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCombinedAR"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_marginTop="10dp"
-                android:text="AR + Avatar"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                app:backgroundTint="#6C4CF1"
-                app:cornerRadius="14dp"/>
+                <!-- Avatar Assistant -->
+                <LinearLayout
+                    android:id="@+id/btnAvatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item"
+                    android:layout_marginBottom="4dp">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_purple"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🤖" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Avatar Assistant"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnExit"
-                android:layout_width="match_parent"
-                android:layout_height="50dp"
-                android:layout_gravity="center_horizontal"
-                android:layout_marginTop="10dp"
-                android:text="Logout"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                app:backgroundTint="#C73D5A"
-                app:cornerRadius="14dp" />
+                <!-- AR + Avatar -->
+                <LinearLayout
+                    android:id="@+id/btnCombinedAR"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="10dp"
+                    android:background="@drawable/bg_menu_item">
+                    <LinearLayout
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="@drawable/bg_menu_icon_purple"
+                        android:gravity="center"
+                        android:layout_marginEnd="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📚" android:textSize="20sp"/>
+                    </LinearLayout>
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="AR + Avatar"
+                        android:textColor="#FFFFFF"
+                        android:textSize="15sp"
+                        android:textStyle="bold"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="›" android:textColor="#8FA5C3" android:textSize="22sp"/>
+                </LinearLayout>
 
-        </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
     </ScrollView>
 
-</RelativeLayout>
+    <!-- Logout button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExit"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="24dp"
+        android:text="⎋  Logout"
+        android:textAllCaps="false"
+        android:textColor="#FF8FA0"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        app:backgroundTint="#2A0D14"
+        app:cornerRadius="16dp"
+        app:strokeColor="#C73D5A"
+        app:strokeWidth="1dp"/>
+
+</LinearLayout>

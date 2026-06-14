@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Firewall Lab</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+        html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
+        body{display:flex;flex-direction:column}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+        .title{color:#fff;font-size:14px;font-weight:600;flex:1}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
+        .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
+        .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
+        .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
+        .chip:active{background:#388BFD22;border-color:#1F6FEB}
+        .canvas-wrap{flex:1;position:relative;overflow:hidden}
+        #canvas{display:block;touch-action:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
+        .hint-icon{font-size:36px;margin-bottom:8px}
+        .hint-text{color:#8FA5C3;font-size:13px}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#F85149;color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#F8514922;color:#FF8FA0;border:1px solid #F8514944}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .info-icon{font-size:20px}
+        .info-text{flex:1}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4}
+    </style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <span class="title">🛡️ Firewall — Interactive Lab</span>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
+</div>
+<div class="toolbar" id="toolbar" style="display:none">
+    <span class="tb-label">ADD:</span>
+    <div class="chip" onclick="addDevice('internet')">☁️ Internet</div>
+    <div class="chip" onclick="addDevice('firewall')">🛡️ Firewall</div>
+    <div class="chip" onclick="addDevice('switch')">🔌 Switch</div>
+    <div class="chip" onclick="addDevice('pc')">💻 PC</div>
+    <div class="chip" onclick="addDevice('server')">🖥️ Server</div>
+    <div class="chip" onclick="clearAll()">🗑️ Clear</div>
+</div>
+<div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="hint" id="hint">
+        <div class="hint-icon">🛡️</div>
+        <div class="hint-text">Add devices from the toolbar<br>then tap two devices to connect them</div>
+    </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap a device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
+</div>
+<div class="info-bar" id="infobar">
+    <span class="info-icon" id="infoIcon">🛡️</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">Firewall Lab</div>
+        <div class="info-sub" id="infoSub">Tap the Firewall to see its rules. 🟡 incoming → 🟢 allowed or 🔴 blocked.</div>
+    </div>
+</div>
+
+<script>
+    const canvas=document.getElementById('canvas');
+    const ctx=canvas.getContext('2d');
+    const SC=1.6;
+    let isDemoMode=true;
+    let pcCount=0;
+
+    function resize(){
+      const th=document.getElementById('topbar').getBoundingClientRect().height;
+      const tbh=document.getElementById('toolbar').getBoundingClientRect().height;
+      const ih=document.getElementById('infobar').getBoundingClientRect().height;
+      canvas.width=window.innerWidth;
+      canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
+      if(isDemoMode) loadDemo(); else draw();
+    }
+
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      packets=[];blocked=[];stats={allowed:0,blocked:0};spawnTimer=0;
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('🛡️','Try It!','Add Internet, Firewall, Switch & PCs — connect them to build your own protected network.');
+      }
+    }
+
+    const DEFS={
+      internet:{label:'Internet', color:'#58A6FF',info:'Source of external traffic — both legitimate requests and potential threats.'},
+      firewall:{label:'Firewall', color:'#F85149',info:'Inspects every packet against security rules. Blocks threats, allows legitimate traffic. Operates at Layer 3–7.'},
+      switch:  {label:'Switch',   color:'#3EC26E',info:'Distributes approved traffic within the internal protected network.'},
+      pc:      {label:'PC',       color:'#7EDCFF',info:'Protected internal device. Only receives traffic approved by the firewall.'},
+      server:  {label:'Server',   color:'#F0A500',info:'Internal server protected by the firewall. Only accessible to authorised users.'}
+    };
+
+    function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+
+    function drawDev(d){
+      ctx.save();ctx.translate(d.x,d.y);ctx.scale(SC,SC);
+      switch(d.type){
+        case 'internet':
+          ctx.fillStyle='#E8EDF2';
+          ctx.beginPath();ctx.arc(-14,-6,14,0,Math.PI*2);ctx.arc(4,-10,16,0,Math.PI*2);
+          ctx.arc(18,-4,12,0,Math.PI*2);ctx.arc(0,4,10,0,Math.PI*2);ctx.arc(-18,2,10,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#1A2744';ctx.font='bold 8px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Internet',2,-2);
+          break;
+        case 'firewall':
+          ctx.fillStyle='#6B0A0A';rr(ctx,-22,-32,44,64,3);ctx.fill();
+          ctx.fillStyle='#C03030';rr(ctx,-20,-30,40,60,2);ctx.fill();
+          ctx.fillStyle='#6B0A0A';
+          for(let row=-4;row<=3;row++){const off=(row%2===0)?0:9;for(let col=-1;col<=1;col++){const bx=-20+col*18+off,by=row*8-1;if(bx>=-20&&bx+17<=20){rr(ctx,bx,by,17,7,1);ctx.fill();}}}
+          ctx.fillStyle='rgba(255,255,255,0.15)';
+          ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(-8,-6);ctx.lineTo(-8,2);ctx.quadraticCurveTo(-8,10,0,14);ctx.quadraticCurveTo(8,10,8,2);ctx.lineTo(8,-6);ctx.closePath();ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,0.6)';
+          ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(-5,-4);ctx.lineTo(-5,1);ctx.quadraticCurveTo(-5,7,0,10);ctx.quadraticCurveTo(5,7,5,1);ctx.lineTo(5,-4);ctx.closePath();ctx.fill();
+          ctx.fillStyle='#FF4040';ctx.beginPath();ctx.arc(-8,22,2.5,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#00FF88';ctx.beginPath();ctx.arc(0,22,2.5,0,Math.PI*2);ctx.fill();
+          ctx.fillStyle='#FFB300';ctx.beginPath();ctx.arc(8,22,2.5,0,Math.PI*2);ctx.fill();
+          break;
+        case 'switch':
+          ctx.fillStyle='#0D2010';rr(ctx,-30,-11,60,22,3);ctx.fill();
+          ctx.fillStyle='#2A6B20';rr(ctx,-28,-9,56,18,2);ctx.fill();
+          for(let i=0;i<8;i++){ctx.fillStyle='#0D1A0D';rr(ctx,-24+i*6.5,-5,5.5,5,1);ctx.fill();ctx.fillStyle=i<5?'#00FF88':'#333';ctx.beginPath();ctx.arc(-21.5+i*6.5,-2.5,1.5,0,Math.PI*2);ctx.fill();}
+          break;
+        case 'pc':
+          ctx.fillStyle='#1A2060';rr(ctx,-20,-24,40,30,3);ctx.fill();
+          ctx.fillStyle='#4A6AE0';rr(ctx,-17,-21,34,23,2);ctx.fill();
+          ctx.fillStyle='rgba(120,160,255,0.5)';for(let i=0;i<3;i++){rr(ctx,-12,-17+i*7,24,4,1);ctx.fill();}
+          ctx.fillStyle='#1A2060';rr(ctx,-3,6,6,6,1);ctx.fill();rr(ctx,-10,12,20,4,2);ctx.fill();
+          break;
+        case 'server':
+          ctx.fillStyle='#2A1A00';rr(ctx,-13,-24,26,48,3);ctx.fill();
+          ctx.fillStyle='#8A5000';rr(ctx,-11,-22,22,44,2);ctx.fill();
+          for(let i=0;i<4;i++){ctx.fillStyle='#1A0D00';rr(ctx,-9,-18+i*10,18,7,1.5);ctx.fill();ctx.fillStyle='#F0A500';ctx.beginPath();ctx.arc(4,-14+i*10,2,0,Math.PI*2);ctx.fill();ctx.fillStyle='#00FF88';ctx.beginPath();ctx.arc(8,-14+i*10,2,0,Math.PI*2);ctx.fill();}
+          break;
+      }
+      ctx.restore();
+    }
+
+    function drawRulesPopup(fw){
+      const bw=210,bh=148,bx=fw.x+50,by=fw.y-90;
+      ctx.save();
+      ctx.fillStyle='rgba(20,6,6,0.97)';rr(ctx,bx,by,bw,bh,10);ctx.fill();
+      ctx.strokeStyle='#F85149';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#F85149';ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText('🛡️ Firewall Rules',bx+10,by+8);
+      ctx.strokeStyle='#F8514944';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+22);ctx.lineTo(bx+bw-8,by+22);ctx.stroke();
+      ctx.fillStyle='#8FA5C3';ctx.font='bold 8px system-ui';ctx.fillText('#  Action   Protocol  Port',bx+10,by+28);
+      ctx.strokeStyle='#F8514422';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+38);ctx.lineTo(bx+bw-8,by+38);ctx.stroke();
+      [{action:'ALLOW',col:'#00FF88',rule:'TCP       Port 80/443'},
+       {action:'ALLOW',col:'#00FF88',rule:'TCP       Port 22 (SSH)'},
+       {action:'DENY', col:'#FF4444',rule:'TCP       Port 23 (Telnet)'},
+       {action:'DENY', col:'#FF4444',rule:'ICMP      Ping flood'},
+       {action:'DENY', col:'#FF4444',rule:'ALL       Unknown src'}].forEach((r,i)=>{
+        const y=by+44+i*19;
+        ctx.fillStyle=r.col;ctx.font='bold 8px monospace';ctx.fillText(r.action,bx+10,y);
+        ctx.fillStyle='#C9D1D9';ctx.font='8px monospace';ctx.fillText(r.rule,bx+60,y);
+      });
+      ctx.restore();
+    }
+
+    function drawConnectRing(d,t){
+      const r=HIT+10+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle=DEFS[d.type].color;ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+    }
+
+    function drawCable(a,b){
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
+      const ux=dx/len,uy=dy/len,g=HIT*0.88;
+      const hasInternet=a.type==='internet'||b.type==='internet';
+      const col=hasInternet?'#FF444488':'#00FF8866';
+      ctx.save();ctx.strokeStyle=col;ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(a.x+ux*g,a.y+uy*g);ctx.lineTo(b.x-ux*g,b.y-uy*g);ctx.stroke();
+      const hl=10,hw=5,ex=b.x-ux*g-ux*hl,ey=b.y-uy*g-uy*hl;
+      ctx.fillStyle=col;
+      ctx.beginPath();ctx.moveTo(b.x-ux*g,b.y-uy*g);ctx.lineTo(ex-uy*hw,ey+ux*hw);ctx.lineTo(ex+uy*hw,ey-ux*hw);ctx.closePath();ctx.fill();
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-28;
+      const lbl=hasInternet?'Untrusted WAN':'Trusted LAN';
+      const lcol=hasInternet?'#FF4444':'#00FF88';
+      ctx.font='bold 9px system-ui';ctx.textAlign='center';
+      const tw=ctx.measureText(lbl).width;
+      ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,mx-tw/2-6,my-10,tw+12,20,5);ctx.fill();
+      ctx.strokeStyle=lcol;ctx.lineWidth=1;ctx.stroke();
+      ctx.fillStyle=lcol;ctx.textBaseline='middle';ctx.fillText(lbl,mx,my);
+      ctx.restore();
+    }
+
+    // Get device directly connected to fw that is not internet
+    function getInternalNextHop(fw){
+      for(const c of cables){
+        if(c.a===fw.id||c.b===fw.id){
+          const otherId=c.a===fw.id?c.b:c.a;
+          const other=devices.find(d=>d.id===otherId);
+          if(other&&other.type!=='internet') return other;
+        }
+      }
+      return null;
+    }
+
+    // Get all end devices connected to a switch (not firewall/internet)
+    function getSwitchEndDevices(sw){
+      const ends=[];
+      for(const c of cables){
+        if(c.a===sw.id||c.b===sw.id){
+          const otherId=c.a===sw.id?c.b:c.a;
+          const other=devices.find(d=>d.id===otherId);
+          if(other&&other.type!=='firewall'&&other.type!=='internet') ends.push(other);
+        }
+      }
+      return ends;
+    }
+
+    const HIT=36*SC*0.65;
+    let packets=[],blocked=[],stats={allowed:0,blocked:0},spawnTimer=0;
+    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
+
+    function spawnPacket(fw,inet){
+      if(!fw||!inet)return;
+      // Only spawn if no yellow/red packet currently in flight
+      if(packets.some(p=>!p.internal)) return;
+      packets.push({x:inet.x,y:inet.y,tx:fw.x,ty:fw.y,progress:0,
+        threat:Math.random()<0.45,speed:0.01+Math.random()*0.005,id:Math.random()});
+    }
+
+    function updatePackets(fw){
+      const newPkts=[];
+      packets=packets.filter(p=>{
+        p.progress+=p.speed;
+        if(p.progress>=1){
+          if(p.threat){
+            // Blocked at firewall
+            blocked.push({x:fw.x,y:fw.y,t:0});
+            stats.blocked++;
+            setInfo('🛡️','Blocked! 🚫','Firewall detected a threat and dropped the packet. Total blocked: '+stats.blocked);
+
+          } else if(!p.internal){
+            // Allowed → spawn ONE green packet to the switch
+            stats.allowed++;
+            const nextHop=getInternalNextHop(fw);
+            if(nextHop&&!packets.some(q=>q.internal)&&!newPkts.some(q=>q.internal)){
+              newPkts.push({
+                x:fw.x,y:fw.y,tx:nextHop.x,ty:nextHop.y,
+                targetDevId:nextHop.id,
+                progress:0,threat:false,internal:true,
+                speed:0.012+Math.random()*0.004,id:Math.random()
+              });
+            }
+
+          } else {
+            // Green packet arrived at its destination
+            const targetDev=devices.find(d=>d.id===p.targetDevId);
+            if(targetDev&&targetDev.type==='switch'){
+              // ✅ Fan out from switch to all connected end devices
+              const endDevices=getSwitchEndDevices(targetDev);
+              endDevices.forEach(end=>{
+                newPkts.push({
+                  x:targetDev.x,y:targetDev.y,tx:end.x,ty:end.y,
+                  targetDevId:end.id,
+                  progress:0,threat:false,internal:true,
+                  speed:0.014+Math.random()*0.004,id:Math.random()
+                });
+              });
+            }
+            // If end device (PC/Server) — packet delivered, nothing more to do
+          }
+          return false;
+        }
+        return true;
+      });
+      packets.push(...newPkts);
+      blocked=blocked.filter(b=>{b.t+=0.04;return b.t<1;});
+    }
+
+    function draw(){
+      if(!canvas.width||!canvas.height)return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(100,140,200,0.07)';
+      for(let x=24;x<canvas.width;x+=32)for(let y=24;y<canvas.height;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+
+      const fw=devices.find(d=>d.type==='firewall');
+      const inet=devices.find(d=>d.type==='internet');
+
+      const fwConnected=fw&&inet&&cables.find(c=>
+        (c.a===fw.id||c.b===fw.id)&&(c.a===inet.id||c.b===inet.id));
+      if(fwConnected){
+        spawnTimer++;
+        if(spawnTimer%90===0) spawnPacket(fw,inet);
+        updatePackets(fw);
+      }
+
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
+        drawCable(a,b);
+      });
+
+      // Live stats
+      if(stats.allowed>0||stats.blocked>0){
+        ctx.save();
+        ctx.fillStyle='rgba(8,14,28,0.9)';rr(ctx,8,8,160,46,8);ctx.fill();
+        ctx.strokeStyle='#F85149';ctx.lineWidth=1;ctx.stroke();
+        ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+        ctx.fillStyle='#00FF88';ctx.fillText('✅ Allowed: '+stats.allowed,16,14);
+        ctx.fillStyle='#FF4444';ctx.fillText('🚫 Blocked: '+stats.blocked,16,32);
+        ctx.restore();
+      }
+
+      // Draw packets
+      packets.forEach(p=>{
+        const px=p.x+(p.tx-p.x)*p.progress,py=p.y+(p.ty-p.y)*p.progress;
+        ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);
+        ctx.fillStyle=p.threat?'#FF4444':p.internal?'#00FF88':'#FFD040';
+        ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.2;ctx.stroke();
+        if(p.threat&&p.progress>0.3&&p.progress<0.85){
+          ctx.save();ctx.font='bold 8px system-ui';ctx.textAlign='center';
+          ctx.fillStyle='#FF4444';ctx.textBaseline='middle';ctx.fillText('⚠️',px,py-12);ctx.restore();
+        }
+      });
+
+      // Block explosions
+      blocked.forEach(b=>{
+        const r=b.t*40,alpha=1-b.t;
+        ctx.save();ctx.strokeStyle=`rgba(255,68,68,${alpha})`;ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(b.x,b.y,r,0,Math.PI*2);ctx.stroke();
+        ctx.font=`bold ${12+b.t*8}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.globalAlpha=alpha;ctx.fillText('🚫',b.x,b.y-r*0.5);ctx.globalAlpha=1;ctx.restore();
+      });
+
+      if(selected&&selected.type==='firewall') drawRulesPopup(selected);
+      if(selected) drawConnectRing(selected,animT);
+
+      devices.forEach(d=>{
+        const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
+        ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
+        const lbl=d.customLabel||def.label;
+        const ly=d.y+HIT*0.78;
+        ctx.font='bold 11px system-ui';ctx.textAlign='center';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(8,14,28,0.92)';rr(ctx,d.x-tw/2-6,ly-9,tw+12,18,3);ctx.fill();
+        ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(lbl,d.x,ly);
+      });
+    }
+
+    function animate(){animT+=0.016;if(devices.length>0)draw();requestAnimationFrame(animate);}
+    animate();
+
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)del(d);},700);}}
+    function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
+    function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
+    canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+    const ICONS={internet:'☁️',firewall:'🛡️',switch:'🔌',pc:'💻',server:'🖥️'};
+
+    function tap(x,y){
+      const d=hit(x,y);
+      if(d){
+        if(selected&&selected.id!==d.id){
+          if(!isDemoMode){
+            if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!',(selected.customLabel||DEFS[selected.type].label)+' ↔ '+(d.customLabel||DEFS[d.type].label));
+            }
+          }
+          selected=null;showBanner(false);
+        } else {
+          selected=d;
+          if(!isDemoMode) showBanner(true);
+          if(d.type==='firewall') setInfo('🛡️',d.customLabel||'Firewall',DEFS.firewall.info+' Tap to see rules.');
+          else setInfo(ICONS[d.type]||'📡',d.customLabel||DEFS[d.type].label,DEFS[d.type].info+(isDemoMode?'':' Tap another device to connect.'));
+        }
+      } else {
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('🛡️','Firewall Lab','🟡 Incoming → Firewall → 🟢 Switch → PCs or 🔴 blocked. Tap "Try It" to build your own!');
+        else setInfo('🛡️','Try Mode','Add Internet, Firewall, Switch & PCs — connect them to see packets flow.');
+      }
+      draw();
+    }
+
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();}
+
+    function addDevice(type){
+      if(isDemoMode)return;
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
+      if(type==='pc'){dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;}
+      else dev.customLabel=DEFS[type].label;
+      devices.push(dev);draw();
+    }
+
+    function loadDemo(){
+      devices=[];cables=[];selected=null;packets=[];blocked=[];stats={allowed:0,blocked:0};spawnTimer=0;showBanner(false);
+      document.getElementById('hint').style.display='none';
+      const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+      const inetId=nextId++;devices.push({id:inetId,type:'internet',customLabel:'Internet',x:cx-W*0.35,y:cy});
+      const fwId=nextId++;devices.push({id:fwId,type:'firewall',customLabel:'Firewall',x:cx,y:cy});
+      const swId=nextId++;devices.push({id:swId,type:'switch',customLabel:'Switch',x:cx+W*0.22,y:cy});
+      const srvId=nextId++;devices.push({id:srvId,type:'server',customLabel:'Server',x:cx+W*0.38,y:cy-H*0.25});
+      const pc1=nextId++;devices.push({id:pc1,type:'pc',customLabel:'PC A',x:cx+W*0.38,y:cy+H*0.05});
+      const pc2=nextId++;devices.push({id:pc2,type:'pc',customLabel:'PC B',x:cx+W*0.38,y:cy+H*0.28});
+      cables=[{a:inetId,b:fwId},{a:fwId,b:swId},{a:swId,b:srvId},{a:swId,b:pc1},{a:swId,b:pc2}];
+      setInfo('🛡️','Firewall — Packet Inspection','🟡 Internet → Firewall → 🟢 Switch → all devices, or 🔴 blocked. Tap Firewall for rules!');
+      draw();
+    }
+
+    function clearAll(){devices=[];cables=[];selected=null;packets=[];blocked=[];stats={allowed:0,blocked:0};pcCount=0;spawnTimer=0;showBanner(false);draw();}
+    function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
+    function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
+
+    window.addEventListener('resize',resize);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
+</script>
+</body>
+</html>
