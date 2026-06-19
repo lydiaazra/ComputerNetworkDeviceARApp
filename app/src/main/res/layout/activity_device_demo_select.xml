@@ -1,265 +1,511 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#0B1026">
+    android:background="#081120"
+    android:fillViewport="true">
 
-    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="16dp"
-        android:background="#0B1026">
+        android:padding="20dp">
 
+        <!-- Header -->
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Network Lab"
-            android:textColor="#FFFFFF"
+            android:text="Data Flow Device"
+            android:textColor="#8FA5C3"
             android:textSize="26sp"
-            android:textStyle="bold"/>
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="6dp"/>
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Select a device to explore its interactive diagram"
             android:textColor="#8FA5C3"
-            android:textSize="13sp"
-            android:layout_marginTop="4dp"/>
-    </LinearLayout>
+            android:textSize="14sp"
+            android:gravity="center"
+            android:layout_marginBottom="28dp"/>
 
-    <!-- Scrollable device grid -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:clipToPadding="false">
-
-        <LinearLayout
+        <!-- Router -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardRouter"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
 
-            <!-- Row 1 -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
+                android:gravity="center_vertical"
+                android:padding="16dp">
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardRouter"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#0D1A35"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔀" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Router" android:textColor="#5B9BFF" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="IP routing" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🔀"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardSwitch"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#0D1F12"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔌" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Switch" android:textColor="#3EC26E" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="MAC forwarding" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Router"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="IP routing"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
             </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-            <!-- Row 2 -->
+        <!-- Switch -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardSwitch"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
+                android:gravity="center_vertical"
+                android:padding="16dp">
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardHub"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#1F1508"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📡" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Hub" android:textColor="#C07020" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Broadcast all" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🔌"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardFirewall"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#1F0808"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🛡️" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Firewall" android:textColor="#F85149" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Packet filtering" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Switch"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAC forwarding"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
             </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-            <!-- Row 3 -->
+        <!-- Hub -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardHub"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
+                android:gravity="center_vertical"
+                android:padding="16dp">
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardWAP"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#081F14"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📶" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Access Point" android:textColor="#0F9E70" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Wi-Fi bridge" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="📡"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardNIC"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#0D1A35"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💾" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="NIC" android:textColor="#7EDCFF" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="MAC address" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Hub"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Broadcasts to all ports"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
             </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-            <!-- Row 4 -->
+        <!-- Firewall -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardFirewall"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal"
-                android:layout_marginBottom="10dp">
+                android:gravity="center_vertical"
+                android:padding="16dp">
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardRepeater"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#0D1A35"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔁" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Repeater" android:textColor="#388BFD" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Signal amplify" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🛡️"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
 
-                <androidx.cardview.widget.CardView
-                    android:id="@+id/cardGateway"
+                <LinearLayout
                     android:layout_width="0dp"
-                    android:layout_height="100dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    app:cardCornerRadius="14dp"
-                    app:cardBackgroundColor="#1A0D1F"
-                    app:cardElevation="4dp">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="12dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🌐" android:textSize="30sp" android:layout_marginBottom="6dp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Gateway" android:textColor="#B060FF" android:textSize="13sp" android:textStyle="bold"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Protocol bridge" android:textColor="#8FA5C3" android:textSize="10sp"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Firewall"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Packet filtering"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
             </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-            <!-- Bottom spacing -->
-            <View android:layout_width="match_parent" android:layout_height="16dp"/>
-        </LinearLayout>
-    </ScrollView>
+        <!-- Access Point -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardAccessPoint"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
 
-    <!-- Back button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnBack"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="24dp"
-        android:layout_marginTop="8dp"
-        android:text="Back"
-        android:textAllCaps="false"
-        android:textSize="15sp"
-        android:textColor="#FFFFFF"
-        app:backgroundTint="#C73D5A"
-        app:cornerRadius="14dp"/>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
 
-</LinearLayout>
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="📶"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Access Point"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Wi-Fi bridge"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- NIC -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardNIC"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="💻"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="NIC"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAC address"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Repeater -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardRepeater"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🔁"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Repeater"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Signal amplify"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Gateway -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardGateway"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="28dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🌐"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Gateway"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Protocol bridge"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Back button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginStart="80dp"
+            android:layout_marginEnd="80dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="24dp"
+            android:text="Back"
+            android:textAllCaps="false"
+            android:textSize="13sp"
+            android:textColor="#FF8FA0"
+            app:backgroundTint="#2A0D14"
+            app:cornerRadius="16dp"
+            app:strokeColor="#C73D5A"
+            app:strokeWidth="1dp"/>
+
+    </LinearLayout>
+</ScrollView>

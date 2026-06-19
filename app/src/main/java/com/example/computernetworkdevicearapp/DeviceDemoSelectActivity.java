@@ -21,7 +21,7 @@ public class DeviceDemoSelectActivity extends AppCompatActivity {
         setupCard(R.id.cardSwitch,   "switch");
         setupCard(R.id.cardHub,      "hub");
         setupCard(R.id.cardFirewall, "firewall");
-        setupCard(R.id.cardWAP,      "wap");
+        setupCard(R.id.cardAccessPoint,      "wap");
         setupCard(R.id.cardNIC,      "nic");
         setupCard(R.id.cardRepeater, "repeater");
         setupCard(R.id.cardGateway,  "gateway");

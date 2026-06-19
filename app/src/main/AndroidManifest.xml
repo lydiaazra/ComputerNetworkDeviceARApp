@@ -49,10 +49,6 @@
             android:exported="false"
             android:windowSoftInputMode="adjustPan"/>
 
-        <activity
-            android:name=".AvatarActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustPan"/>
 
         <activity
             android:name=".CameraARActivity"

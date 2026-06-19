@@ -56,7 +56,7 @@ public class CombinedARActivity extends AppCompatActivity
     private static final int    CAMERA_PERMISSION_CODE = 600;
     private static final int    SPEECH_REQUEST_CODE    = 700;
     private static final int    CHUNK_SIZE             = 100_000;
-    private static final String BACKEND_URL = "http://10.204.96.101:3000/inworld-chat";
+    private static final String BACKEND_URL = "http://172.20.10.7:3000/inworld-chat";
 
     // All available devices
     private static final String[] DEVICES = {
