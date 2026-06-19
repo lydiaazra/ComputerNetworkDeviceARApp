@@ -9,9 +9,11 @@ import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
+import android.text.Html;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -19,6 +21,7 @@ import android.webkit.WebViewClient;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.PopupMenu;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,6 +33,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -70,6 +76,8 @@ public class CombinedARActivity extends AppCompatActivity
     private TextView       tvAvatarStatus, tvAssistantReply, tvDeviceName;
     private EditText       etQuestion;
     private MaterialButton btnAsk, btnSpeak, btnBack, btnMic, btnChangeDevice;
+    private View           bottomPanel;
+    private ScrollView     replyScroll;
 
     // TTS
     private TextToSpeech tts;
@@ -86,6 +94,11 @@ public class CombinedARActivity extends AppCompatActivity
     private boolean isPageFinished = false;
     private boolean isGlbReady     = false;
 
+    // Full conversation log (You / Assistant turns), rendered as HTML in tvAssistantReply
+    private final StringBuilder conversationLog = new StringBuilder();
+    private static final String DEFAULT_GREETING =
+            "Ask me anything about this network device.";
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -95,6 +108,9 @@ public class CombinedARActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_combined_ar);
 
+        // Allow content to draw edge-to-edge, then handle keyboard/nav insets manually
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName == null || deviceName.isEmpty()) deviceName = "Router";
 
@@ -103,11 +119,13 @@ public class CombinedARActivity extends AppCompatActivity
         gltfLoaderJs = readAssetAsString("assets/GLTFLoader.js");
 
         bindViews();
+        setupKeyboardInsets();
         setupAvatarWebView();
         setupModelWebView();
         setupButtons();
         setupTTS();
         loadGlbInBackground();
+        resetConversation();
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -170,8 +188,74 @@ public class CombinedARActivity extends AppCompatActivity
         btnBack          = findViewById(R.id.btnBack);
         btnMic           = findViewById(R.id.btnMic);
         btnChangeDevice  = findViewById(R.id.btnChangeDevice);
+        bottomPanel      = findViewById(R.id.bottomPanel);
+        replyScroll      = findViewById(R.id.replyScroll);
 
         tvDeviceName.setText(deviceName);
+    }
+
+    // -------------------------------------------------------------------------
+    // Keyboard / nav-bar inset handling
+    // -------------------------------------------------------------------------
+
+    private void setupKeyboardInsets() {
+        final int baseMarginPx = (int) (48 * getResources().getDisplayMetrics().density);
+
+        ViewCompat.setOnApplyWindowInsetsListener(bottomPanel, (v, insets) -> {
+            int imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+
+            ViewGroup.MarginLayoutParams params =
+                    (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = imeBottom > 0
+                    ? imeBottom
+                    : Math.max(navBottom, baseMarginPx);
+            v.setLayoutParams(params);
+
+            return insets;
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Conversation log — full chat history (You / Assistant)
+    // -------------------------------------------------------------------------
+
+    private void resetConversation() {
+        conversationLog.setLength(0);
+        conversationLog.append(DEFAULT_GREETING);
+        renderConversation();
+    }
+
+    private void appendMessage(String sender, String message) {
+        if (conversationLog.length() > 0) conversationLog.append("<br><br>");
+        String color = sender.equals("You") ? "#7EDCFF" : "#9EE6A8";
+        String safeMessage = message
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\n", "<br>");
+        conversationLog.append("<b><font color='").append(color).append("'>")
+                .append(sender).append(":</font></b> ").append(safeMessage);
+        renderConversation();
+    }
+
+    private void renderConversation() {
+        runOnUiThread(() -> {
+            tvAssistantReply.setText(
+                    Html.fromHtml(conversationLog.toString(), Html.FROM_HTML_MODE_LEGACY));
+            if (replyScroll != null) {
+                replyScroll.post(() -> replyScroll.fullScroll(View.FOCUS_DOWN));
+            }
+        });
+    }
+
+    /** Returns the plain text of the last "Assistant" turn, for the Speak button. */
+    private String getLastAssistantReply() {
+        String html = conversationLog.toString();
+        int idx = html.lastIndexOf("Assistant:</font></b> ");
+        if (idx == -1) return "";
+        String tail = html.substring(idx + "Assistant:</font></b> ".length());
+        return Html.fromHtml(tail, Html.FROM_HTML_MODE_LEGACY).toString().trim();
     }
 
     // -------------------------------------------------------------------------
@@ -215,8 +299,8 @@ public class CombinedARActivity extends AppCompatActivity
     private void switchDevice(String newDevice) {
         deviceName = newDevice;
         tvDeviceName.setText(deviceName);
-        tvAssistantReply.setText("Ask me anything about this network device.");
         tvAvatarStatus.setText("Loading model...");
+        resetConversation();
 
         // Reset flags and reload GLB
         isGlbReady = false;
@@ -404,14 +488,15 @@ public class CombinedARActivity extends AppCompatActivity
                         Toast.LENGTH_SHORT).show();
                 return;
             }
+            appendMessage("You", q);
+            etQuestion.setText("");
             tvAvatarStatus.setText("Thinking...");
-            tvAssistantReply.setText("Please wait...");
             askAssistant(q);
         });
 
         btnSpeak.setOnClickListener(v -> {
-            String reply = tvAssistantReply.getText().toString().trim();
-            if (reply.isEmpty() || reply.equals("Please wait...")) {
+            String reply = getLastAssistantReply();
+            if (reply.isEmpty()) {
                 Toast.makeText(this, "No reply to speak yet",
                         Toast.LENGTH_SHORT).show();
                 return;
@@ -475,19 +560,18 @@ public class CombinedARActivity extends AppCompatActivity
                         .optString("reply", "Sorry, no response.");
 
                 runOnUiThread(() -> {
-                    tvAssistantReply.setText(reply);
+                    appendMessage("Assistant", reply);
                     tvAvatarStatus.setText("Ready — tap Speak");
-                    etQuestion.setText("");
                 });
 
             } catch (java.net.ConnectException e) {
                 runOnUiThread(() -> {
-                    tvAssistantReply.setText("Cannot reach server.");
+                    appendMessage("Assistant", "Cannot reach server.");
                     tvAvatarStatus.setText("Offline");
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    tvAssistantReply.setText("Error: " + e.getMessage());
+                    appendMessage("Assistant", "Error: " + e.getMessage());
                     tvAvatarStatus.setText("Error");
                 });
             } finally {

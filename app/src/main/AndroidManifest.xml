@@ -36,19 +36,23 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".LoginActivity"/>
-        <activity android:name=".RegisterActivity"/>
-        <activity android:name=".MainMenuActivity"/>
-        <activity android:name=".QuizLevelActivity"/>
-        <activity android:name=".ResultActivity"/>
-        <activity android:name=".DeviceDisplay"/>
-        <activity android:name=".CombinedARActivity"/>
+        <activity android:name=".LoginActivity" android:exported="false"/>
+        <activity android:name=".RegisterActivity" android:exported="false"/>
+        <activity android:name=".MainMenuActivity" android:exported="false"/>
+        <activity android:name=".QuizLevelActivity" android:exported="false"/>
+        <activity android:name=".ResultActivity" android:exported="false"/>
+        <activity android:name=".DeviceDisplay" android:exported="false"/>
+
+        <!-- Has EditText + keyboard at bottom — adjustResize keeps input visible -->
+        <activity
+            android:name=".CombinedARActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"/>
 
         <activity
             android:name=".ARQuizActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustPan"/>
-
 
         <activity
             android:name=".CameraARActivity"

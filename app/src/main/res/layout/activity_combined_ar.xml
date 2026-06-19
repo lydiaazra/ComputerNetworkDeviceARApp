@@ -78,26 +78,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
 
-    <!-- Change Device button — top left -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnChangeDevice"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="8dp"
-        android:text="Change Device"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="11sp"
-        app:backgroundTint="#2A4A7F"
-        app:cornerRadius="10dp"
-        app:icon="@android:drawable/ic_menu_sort_by_size"
-        app:iconSize="12dp"
-        app:iconTint="#7EDCFF"
-        app:iconPadding="4dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
-
     <!-- Avatar status label -->
     <TextView
         android:id="@+id/tvAvatarStatus"
@@ -151,7 +131,7 @@
         android:orientation="vertical"
         android:background="#EE081120"
         android:padding="12dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="48dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -192,7 +172,7 @@
 
         </LinearLayout>
 
-        <!-- Action buttons -->
+        <!-- Action buttons: Change Device, Ask, Speak, Back -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -200,13 +180,34 @@
             android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnChangeDevice"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:text="Device"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:paddingStart="2dp"
+                android:paddingEnd="2dp"
+                app:backgroundTint="#2A4A7F"
+                app:cornerRadius="12dp"
+                app:icon="@android:drawable/ic_menu_sort_by_size"
+                app:iconSize="12dp"
+                app:iconTint="#7EDCFF"
+                app:iconPadding="3dp"
+                app:iconGravity="textStart"/>
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAsk"
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
+                android:layout_marginStart="6dp"
                 android:text="Ask"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
+                android:textSize="11sp"
                 app:backgroundTint="#4A67F5"
                 app:cornerRadius="12dp"/>
 
@@ -215,10 +216,11 @@
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:text="Speak"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
+                android:textSize="11sp"
                 app:backgroundTint="#14C7E3"
                 app:cornerRadius="12dp"/>
 
@@ -227,10 +229,11 @@
                 android:layout_width="0dp"
                 android:layout_height="40dp"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="6dp"
                 android:text="Back"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
+                android:textSize="11sp"
                 app:backgroundTint="#C73D5A"
                 app:cornerRadius="12dp"/>
 
