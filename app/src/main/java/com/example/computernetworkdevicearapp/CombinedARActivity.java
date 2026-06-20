@@ -441,10 +441,7 @@ public class CombinedARActivity extends AppCompatActivity
             tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                 @Override
                 public void onStart(String id) {
-                    runOnUiThread(() -> {
-                        tvAvatarStatus.setText("Speaking...");
-                        avatarWebView.evaluateJavascript("startTalking()", null);
-                    });
+                    runOnUiThread(() -> tvAvatarStatus.setText("Speaking..."));
                 }
                 @Override
                 public void onDone(String id) {
@@ -468,6 +465,9 @@ public class CombinedARActivity extends AppCompatActivity
             return;
         }
         tvAvatarStatus.setText("Speaking...");
+        // Start the gesture/lip-sync animation immediately — don't wait for
+        // TTS onStart, which can fire late (sometimes near the end of short replies).
+        avatarWebView.evaluateJavascript("startTalking()", null);
         android.os.Bundle params = new android.os.Bundle();
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "avatar_speech");
     }
@@ -608,10 +608,11 @@ public class CombinedARActivity extends AppCompatActivity
                 "var renderer,scene,camera,clock,mixer=null;" +
                 "var avatarModel=null,idleAction=null,talkAction=null;" +
                 "var headBone=null,jawBone=null;" +
+                "var leftUpperArmBone=null,rightUpperArmBone=null;" +
                 "var leftArmBone=null,rightArmBone=null;" +
                 "var leftHandBone=null,rightHandBone=null;" +
-                "var mouthMesh=null,mouthMorphIndices=[];" +
-                "var isTalking=false,talkInterval=null;" +
+                "var morphTargets=[];" +
+                "var isTalking=false,talkPhase=0,talkWeight=0;" +
 
                 "function initScene(){" +
                 "  clock=new THREE.Clock();" +
@@ -634,6 +635,7 @@ public class CombinedARActivity extends AppCompatActivity
                 "  setStatus('Loading...');" +
                 "  new THREE.GLTFLoader().load(url,function(gltf){" +
                 "    avatarModel=gltf.scene;scene.add(avatarModel);" +
+                "    avatarModel.rotation.y=0.3;" +
                 "    avatarModel.traverse(function(node){" +
                 "      var n=(node.name||'').toLowerCase();" +
                 "      if(!headBone&&n.includes('head'))headBone=node;" +
@@ -642,14 +644,26 @@ public class CombinedARActivity extends AppCompatActivity
                 "      if(!rightHandBone&&(n.includes('righthand')||n.includes('hand_r')))rightHandBone=node;" +
                 "      if(!leftArmBone&&(n.includes('leftforearm')||n.includes('forearm_l')))leftArmBone=node;" +
                 "      if(!rightArmBone&&(n.includes('rightforearm')||n.includes('forearm_r')))rightArmBone=node;" +
+                "      if(!leftUpperArmBone&&n==='leftarm')leftUpperArmBone=node;" +
+                "      if(!rightUpperArmBone&&n==='rightarm')rightUpperArmBone=node;" +
                 "      if(node.isMesh&&node.morphTargetDictionary){" +
                 "        var dict=node.morphTargetDictionary;" +
-                "        var mouthKeys=Object.keys(dict).filter(function(k){" +
-                "          var kl=k.toLowerCase();" +
-                "          return kl.includes('jaw')||kl.includes('mouth')||kl.includes('viseme');});" +
-                "        if(mouthKeys.length>0&&!mouthMesh){" +
-                "          mouthMesh=node;" +
-                "          mouthMorphIndices=mouthKeys.map(function(k){return dict[k];});}" +
+                "        var primaryNames=['jawOpen','mouthOpen'];" +
+                "        var visemeNames=['viseme_aa','viseme_E','viseme_I','viseme_O','viseme_U'," +
+                "          'viseme_PP','viseme_FF','viseme_TH','viseme_DD'," +
+                "          'viseme_kk','viseme_CH','viseme_SS','viseme_nn','viseme_RR'];" +
+                "        var foundPrimary=primaryNames.filter(function(k){return dict.hasOwnProperty(k);});" +
+                "        var foundViseme=visemeNames.filter(function(k){return dict.hasOwnProperty(k);});" +
+                "        if((foundPrimary.length+foundViseme.length)>0){" +
+                "          var mats=Array.isArray(node.material)?node.material:[node.material];" +
+                "          mats.forEach(function(m){if(m){m.morphTargets=true;m.morphNormals=true;m.needsUpdate=true;}});" +
+                "          morphTargets.push({" +
+                "            mesh:node," +
+                "            primary:foundPrimary.map(function(k){return dict[k];})," +
+                "            viseme:foundViseme.map(function(k){return dict[k];})" +
+                "          });" +
+                "          if(window.AndroidBridge)AndroidBridge.log('LipSync mesh='+node.name+' primary='+foundPrimary.join(',')+' visemes='+foundViseme.join(','));" +
+                "        }" +
                 "      }" +
                 "    });" +
                 "    var anims=gltf.animations||[];" +
@@ -666,34 +680,49 @@ public class CombinedARActivity extends AppCompatActivity
                 "};" +
 
                 "window.startTalking=function(){" +
-                "  isTalking=true;" +
-                "  if(talkAction&&idleAction){idleAction.fadeOut(0.2);talkAction.reset().fadeIn(0.2).play();}" +
-                "  var phase=0;" +
-                "  talkInterval=setInterval(function(){" +
-                "    phase++;var t=phase*0.12;" +
-                "    if(mouthMesh&&mouthMorphIndices.length>0){" +
-                "      var jawVal=Math.max(0,0.5*Math.abs(Math.sin(t*3.0))+0.2*Math.random());" +
-                "      mouthMorphIndices.forEach(function(idx,i){" +
-                "        mouthMesh.morphTargetInfluences[idx]=Math.max(0,0.6*Math.abs(Math.sin(t*2.5+i*0.7))*jawVal);});}" +
-                "    if(jawBone){jawBone.rotation.x=0.35*Math.abs(Math.sin(t*3.0));}" +
-                "    if(headBone){headBone.rotation.x=0.06*Math.sin(t*1.2);headBone.rotation.y=0.05*Math.sin(t*0.8);}" +
-                "    if(leftHandBone){leftHandBone.rotation.z=0.1*Math.sin(t*1.5);}" +
-                "    if(rightHandBone){rightHandBone.rotation.z=-0.1*Math.sin(t*1.5+0.5);}" +
-                "    if(avatarModel){avatarModel.rotation.y=0.025*Math.sin(t*0.5);avatarModel.position.y=0.008*Math.sin(t*0.9);}" +
-                "  },80);" +
+                "  isTalking=true;talkPhase=0;" +
+                "  if(window.AndroidBridge)AndroidBridge.log('startTalking. morphMeshes='+morphTargets.length+' upperArmL='+(!!leftUpperArmBone)+' upperArmR='+(!!rightUpperArmBone));" +
+                "  if(talkAction){idleAction&&idleAction.fadeOut(0.2);talkAction.reset().fadeIn(0.2).play();}" +
                 "};" +
+
+                "function applyTalkPose(dt){" +
+                "  talkPhase+=dt;var t=talkPhase*3.0;" +
+                "  var target=isTalking?1:0;" +
+                "  talkWeight+=(target-talkWeight)*Math.min(1,dt*6);" +
+
+                "  if(morphTargets.length>0){" +
+                "    var mainOpen=Math.max(0,0.45*Math.abs(Math.sin(t*1.4))+0.08*Math.random())*talkWeight;" +
+                "    morphTargets.forEach(function(mt){" +
+                "      mt.primary.forEach(function(idx){mt.mesh.morphTargetInfluences[idx]=mainOpen;});" +
+                "      mt.viseme.forEach(function(idx,i){" +
+                "        mt.mesh.morphTargetInfluences[idx]=Math.max(0,0.35*Math.abs(Math.sin(t*0.9+i*0.8))*mainOpen);});" +
+                "    });" +
+                "  }" +
+                "  if(jawBone){jawBone.rotation.x+=0.35*Math.abs(Math.sin(t*1.4))*talkWeight;}" +
+                "  if(headBone){headBone.rotation.x+=0.05*Math.sin(t*0.4)*talkWeight;headBone.rotation.y+=0.04*Math.sin(t*0.27)*talkWeight;}" +
+
+                "  var lift=Math.max(0,Math.sin(t*1.6))*talkWeight;" +
+                "  if(leftUpperArmBone){" +
+                "    leftUpperArmBone.rotation.z+=0.85*lift;" +
+                "    leftUpperArmBone.rotation.x+=0.1*lift;}" +
+                "  if(leftArmBone){leftArmBone.rotation.z+=0.4*lift;}" +
+                "}" +
 
                 "window.stopTalking=function(){" +
                 "  isTalking=false;" +
-                "  if(talkInterval){clearInterval(talkInterval);talkInterval=null;}" +
-                "  if(talkAction&&idleAction){talkAction.fadeOut(0.3);idleAction.reset().fadeIn(0.3).play();}" +
-                "  if(mouthMesh&&mouthMorphIndices.length>0){mouthMorphIndices.forEach(function(idx){mouthMesh.morphTargetInfluences[idx]=0;});}" +
-                "  if(jawBone){jawBone.rotation.x=0;}" +
-                "  if(headBone){headBone.rotation.x=0;headBone.rotation.y=0;}" +
-                "  if(avatarModel){avatarModel.rotation.y=0;avatarModel.position.y=0;}" +
+                "  if(talkAction){" +
+                "    talkAction.fadeOut(0.3);" +
+                "    if(idleAction){idleAction.reset().fadeIn(0.3).play();}" +
+                "  }" +
                 "};" +
 
-                "function animate(){requestAnimationFrame(animate);var dt=clock?clock.getDelta():0;if(mixer)mixer.update(dt);if(renderer&&scene&&camera)renderer.render(scene,camera);}" +
+                "function animate(){" +
+                "  requestAnimationFrame(animate);" +
+                "  var dt=clock?clock.getDelta():0;" +
+                "  if(mixer)mixer.update(dt);" +
+                "  if(isTalking||talkWeight>0.001)applyTalkPose(dt);" +
+                "  if(renderer&&scene&&camera)renderer.render(scene,camera);" +
+                "}" +
                 "function setStatus(m){document.getElementById('status').textContent=m;}" +
                 "window.addEventListener('load',function(){var t=0;(function wait(){if(typeof THREE!=='undefined'&&THREE.GLTFLoader){initScene();}else if(t++<30){setTimeout(wait,200);}else{setStatus('Failed');}})();});" +
                 "window.addEventListener('resize',function(){if(!renderer)return;camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});" +

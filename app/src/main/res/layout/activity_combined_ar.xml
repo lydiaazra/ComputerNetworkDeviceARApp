@@ -162,13 +162,17 @@
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:layout_marginStart="8dp"
-                android:text="🎤"
-                android:textSize="16sp"
+                android:text=""
                 android:textAllCaps="false"
-                android:paddingStart="0dp"
-                android:paddingEnd="0dp"
-                app:backgroundTint="#1E9E49"
-                app:cornerRadius="12dp"/>
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:icon="@android:drawable/ic_btn_speak_now"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="20dp"
+                app:iconTint="#FFFFFF"
+                app:backgroundTint="#2A4A7F"
+                app:cornerRadius="6dp"/>
 
         </LinearLayout>
 
@@ -191,7 +195,7 @@
                 android:paddingStart="2dp"
                 android:paddingEnd="2dp"
                 app:backgroundTint="#2A4A7F"
-                app:cornerRadius="12dp"
+                app:cornerRadius="6dp"
                 app:icon="@android:drawable/ic_menu_sort_by_size"
                 app:iconSize="12dp"
                 app:iconTint="#7EDCFF"
@@ -208,8 +212,8 @@
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="11sp"
-                app:backgroundTint="#4A67F5"
-                app:cornerRadius="12dp"/>
+                app:backgroundTint="#2A4A7F"
+                app:cornerRadius="6dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSpeak"
@@ -221,8 +225,8 @@
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="11sp"
-                app:backgroundTint="#14C7E3"
-                app:cornerRadius="12dp"/>
+                app:backgroundTint="#2A4A7F"
+                app:cornerRadius="6dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
@@ -234,8 +238,8 @@
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
                 android:textSize="11sp"
-                app:backgroundTint="#C73D5A"
-                app:cornerRadius="12dp"/>
+                app:backgroundTint="#2A4A7F"
+                app:cornerRadius="6dp"/>
 
         </LinearLayout>
     </LinearLayout>
