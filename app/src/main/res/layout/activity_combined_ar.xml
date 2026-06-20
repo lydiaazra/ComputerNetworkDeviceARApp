@@ -110,16 +110,11 @@
         app:layout_constraintStart_toEndOf="@id/avatarWebView"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:id="@+id/tvAssistantReply"
+        <LinearLayout
+            android:id="@+id/llConversation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/bg_info_card"
-            android:padding="10dp"
-            android:text="Ask me anything about this network device."
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:lineSpacingExtra="3dp"/>
+            android:orientation="vertical"/>
 
     </ScrollView>
 

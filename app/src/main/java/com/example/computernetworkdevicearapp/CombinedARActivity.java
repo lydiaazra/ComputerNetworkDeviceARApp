@@ -5,13 +5,18 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
-import android.text.Html;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
@@ -20,6 +25,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -73,7 +79,8 @@ public class CombinedARActivity extends AppCompatActivity
     private PreviewView    cameraPreview;
     private WebView        avatarWebView;
     private WebView        modelWebView;
-    private TextView       tvAvatarStatus, tvAssistantReply, tvDeviceName;
+    private TextView       tvAvatarStatus, tvDeviceName;
+    private LinearLayout   llConversation;
     private EditText       etQuestion;
     private MaterialButton btnAsk, btnSpeak, btnBack, btnMic, btnChangeDevice;
     private View           bottomPanel;
@@ -94,8 +101,8 @@ public class CombinedARActivity extends AppCompatActivity
     private boolean isPageFinished = false;
     private boolean isGlbReady     = false;
 
-    // Full conversation log (You / Assistant turns), rendered as HTML in tvAssistantReply
-    private final StringBuilder conversationLog = new StringBuilder();
+    // Last AI Avatar reply text, kept for the Speak button
+    private String lastAssistantReply = "";
     private static final String DEFAULT_GREETING =
             "Ask me anything about this network device.";
 
@@ -180,8 +187,8 @@ public class CombinedARActivity extends AppCompatActivity
         avatarWebView    = findViewById(R.id.avatarWebView);
         modelWebView     = findViewById(R.id.modelWebView);
         tvAvatarStatus   = findViewById(R.id.tvAvatarStatus);
-        tvAssistantReply = findViewById(R.id.tvAssistantReply);
         tvDeviceName     = findViewById(R.id.tvDeviceName);
+        llConversation   = findViewById(R.id.llConversation);
         etQuestion       = findViewById(R.id.etQuestion);
         btnAsk           = findViewById(R.id.btnAsk);
         btnSpeak         = findViewById(R.id.btnSpeak);
@@ -217,45 +224,73 @@ public class CombinedARActivity extends AppCompatActivity
     }
 
     // -------------------------------------------------------------------------
-    // Conversation log — full chat history (You / Assistant)
+    // Conversation log — real chat bubbles (You = right, AI Avatar = left)
     // -------------------------------------------------------------------------
 
     private void resetConversation() {
-        conversationLog.setLength(0);
-        conversationLog.append(DEFAULT_GREETING);
-        renderConversation();
+        if (llConversation == null) return;
+        llConversation.removeAllViews();
+        lastAssistantReply = "";
+        llConversation.addView(buildBubble(false, "AI Avatar", DEFAULT_GREETING));
     }
 
     private void appendMessage(String sender, String message) {
-        if (conversationLog.length() > 0) conversationLog.append("<br><br>");
-        String color = sender.equals("You") ? "#7EDCFF" : "#9EE6A8";
-        String safeMessage = message
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\n", "<br>");
-        conversationLog.append("<b><font color='").append(color).append("'>")
-                .append(sender).append(":</font></b> ").append(safeMessage);
-        renderConversation();
-    }
+        boolean isUser = sender.equals("You");
+        String label = isUser ? "You" : "AI Avatar";
+        if (!isUser) lastAssistantReply = message;
 
-    private void renderConversation() {
         runOnUiThread(() -> {
-            tvAssistantReply.setText(
-                    Html.fromHtml(conversationLog.toString(), Html.FROM_HTML_MODE_LEGACY));
+            if (llConversation != null) {
+                llConversation.addView(buildBubble(isUser, label, message));
+            }
             if (replyScroll != null) {
                 replyScroll.post(() -> replyScroll.fullScroll(View.FOCUS_DOWN));
             }
         });
     }
 
-    /** Returns the plain text of the last "Assistant" turn, for the Speak button. */
+    /** Builds a single chat bubble, right-aligned for the user, left-aligned for the AI Avatar. */
+    private TextView buildBubble(boolean isUser, String label, String message) {
+        int labelColor = isUser ? 0xFF7EDCFF : 0xFF9EE6A8;
+        int bubbleColor = isUser ? 0xFF1A3A6B : 0xFF1C2438;
+
+        SpannableStringBuilder ssb = new SpannableStringBuilder();
+        String prefix = label + ": ";
+        ssb.append(prefix);
+        ssb.setSpan(new StyleSpan(Typeface.BOLD), 0, prefix.length(), 0);
+        ssb.setSpan(new ForegroundColorSpan(labelColor), 0, prefix.length(), 0);
+        ssb.append(message);
+
+        TextView tv = new TextView(this);
+        tv.setText(ssb);
+        tv.setTextColor(0xFFFFFFFF);
+        tv.setTextSize(12);
+        int padH = dp(12), padV = dp(8);
+        tv.setPadding(padH, padV, padH, padV);
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(bubbleColor);
+        bg.setCornerRadius(dp(12));
+        tv.setBackground(bg);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.gravity = isUser ? Gravity.END : Gravity.START;
+        lp.topMargin = dp(4);
+        lp.bottomMargin = dp(4);
+        tv.setLayoutParams(lp);
+
+        return tv;
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density);
+    }
+
+    /** Returns the plain text of the last "AI Avatar" turn, for the Speak button. */
     private String getLastAssistantReply() {
-        String html = conversationLog.toString();
-        int idx = html.lastIndexOf("Assistant:</font></b> ");
-        if (idx == -1) return "";
-        String tail = html.substring(idx + "Assistant:</font></b> ".length());
-        return Html.fromHtml(tail, Html.FROM_HTML_MODE_LEGACY).toString().trim();
+        return lastAssistantReply;
     }
 
     // -------------------------------------------------------------------------
