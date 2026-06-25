@@ -45,6 +45,9 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.json.JSONObject;
 
@@ -58,7 +61,9 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class CombinedARActivity extends AppCompatActivity
@@ -69,6 +74,9 @@ public class CombinedARActivity extends AppCompatActivity
     private static final int    SPEECH_REQUEST_CODE    = 700;
     private static final int    CHUNK_SIZE             = 100_000;
     private static final String BACKEND_URL = "http://172.20.10.7:3000/inworld-chat";
+
+    private FirebaseFirestore db;
+    private FirebaseAuth      mAuth;
 
     // All available devices
     private static final String[] DEVICES = {
@@ -82,7 +90,7 @@ public class CombinedARActivity extends AppCompatActivity
     private TextView       tvAvatarStatus, tvDeviceName;
     private LinearLayout   llConversation;
     private EditText       etQuestion;
-    private MaterialButton btnAsk, btnSpeak, btnBack, btnMic, btnChangeDevice;
+    private MaterialButton btnAsk, btnSpeak, btnBack, btnMic, btnChangeDevice, btnHistory;
     private View           bottomPanel;
     private ScrollView     replyScroll;
 
@@ -120,6 +128,9 @@ public class CombinedARActivity extends AppCompatActivity
 
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName == null || deviceName.isEmpty()) deviceName = "Router";
+
+        db = FirebaseFirestore.getInstance();
+        mAuth = FirebaseAuth.getInstance();
 
         avatarBase64 = readAssetAsBase64("models/avatar.glb");
         threeJs      = readAssetAsString("assets/three.min.js");
@@ -195,6 +206,7 @@ public class CombinedARActivity extends AppCompatActivity
         btnBack          = findViewById(R.id.btnBack);
         btnMic           = findViewById(R.id.btnMic);
         btnChangeDevice  = findViewById(R.id.btnChangeDevice);
+        btnHistory       = findViewById(R.id.btnHistory);
         bottomPanel      = findViewById(R.id.bottomPanel);
         replyScroll      = findViewById(R.id.replyScroll);
 
@@ -234,10 +246,19 @@ public class CombinedARActivity extends AppCompatActivity
         llConversation.addView(buildBubble(false, "AI Avatar", DEFAULT_GREETING));
     }
 
+    // Topic of the current exchange, detected from the user's question text.
+    // Falls back to the active device context if no device keyword is found.
+    private String currentTopicTag = null;
+
     private void appendMessage(String sender, String message) {
         boolean isUser = sender.equals("You");
         String label = isUser ? "You" : "AI Avatar";
         if (!isUser) lastAssistantReply = message;
+
+        if (isUser) {
+            currentTopicTag = detectDeviceTopic(message);
+        }
+        String topicForSave = currentTopicTag != null ? currentTopicTag : deviceName;
 
         runOnUiThread(() -> {
             if (llConversation != null) {
@@ -247,6 +268,40 @@ public class CombinedARActivity extends AppCompatActivity
                 replyScroll.post(() -> replyScroll.fullScroll(View.FOCUS_DOWN));
             }
         });
+
+        saveMessageToHistory(label, message, topicForSave);
+    }
+
+    /** Detects which device a question is actually about, based on keywords in the text. */
+    private String detectDeviceTopic(String text) {
+        String q = text.toLowerCase();
+        if (q.contains("router"))                                            return "Router";
+        if (q.contains("switch"))                                            return "Switch";
+        if (q.contains("firewall"))                                          return "Firewall";
+        if (q.contains("access point") || q.contains("wap")
+                || q.contains("wireless access"))                            return "Access Point";
+        if (q.contains("repeater"))                                          return "Repeater";
+        if (q.contains("gateway"))                                           return "Gateway";
+        if (q.contains("nic") || q.contains("network interface card"))      return "NIC";
+        if (q.contains("hub"))                                               return "Hub";
+        return deviceName;
+    }
+
+    /** Persists one chat turn to Firestore under the current user, tagged with the detected topic. */
+    private void saveMessageToHistory(String label, String message, String topic) {
+        if (mAuth.getCurrentUser() == null) return;
+        String uid = mAuth.getCurrentUser().getUid();
+
+        Map<String, Object> entry = new HashMap<>();
+        entry.put("sender", label);
+        entry.put("message", message);
+        entry.put("deviceName", topic);
+        entry.put("timestamp", FieldValue.serverTimestamp());
+
+        db.collection("users").document(uid)
+                .collection("chatHistory")
+                .add(entry)
+                .addOnFailureListener(e -> Log.w(TAG, "Failed to save chat history: " + e.getMessage()));
     }
 
     /** Builds a single chat bubble, right-aligned for the user, left-aligned for the AI Avatar. */
@@ -333,6 +388,7 @@ public class CombinedARActivity extends AppCompatActivity
 
     private void switchDevice(String newDevice) {
         deviceName = newDevice;
+        currentTopicTag = null;
         tvDeviceName.setText(deviceName);
         tvAvatarStatus.setText("Loading model...");
         resetConversation();
@@ -515,6 +571,9 @@ public class CombinedARActivity extends AppCompatActivity
 
         // Change device — show popup menu
         btnChangeDevice.setOnClickListener(v -> showDeviceMenu());
+
+        btnHistory.setOnClickListener(v ->
+                startActivity(new Intent(this, ChatHistoryActivity.class)));
 
         btnAsk.setOnClickListener(v -> {
             String q = etQuestion.getText().toString().trim();

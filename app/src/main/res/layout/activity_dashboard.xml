@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#0B1026">
+
+    <!-- Fixed top header: greeting + logout -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="22dp"
+        android:paddingEnd="22dp"
+        android:paddingTop="32dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Hi, "
+            android:textColor="#B7C9E6"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/tvUserName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="User 👋"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Logout"
+            android:textAllCaps="false"
+            android:textColor="#FF8FA0"
+            android:textSize="11sp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            app:backgroundTint="#2A0D14"
+            app:cornerRadius="16dp"
+            app:strokeColor="#C73D5A"
+            app:strokeWidth="1dp"/>
+
+    </LinearLayout>
+
+    <!-- Remaining content, centered in the space below the header -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp">
+
+            <!-- Headline -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="What would you like\nto explore?"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:lineSpacingExtra="2dp"
+                android:layout_marginBottom="24dp"/>
+
+            <!-- Row 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardARDevices"
+                    android:layout_width="0dp"
+                    android:layout_height="138dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#AEB9F2"
+                    app:cardElevation="3dp">
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="14dp">
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="top|start"
+                            android:background="@drawable/bg_dashboard_icon_dark"
+                            android:gravity="center"
+                            android:text="📡"
+                            android:textSize="18sp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:text="↗"
+                            android:textColor="#2A2E45"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|start"
+                            android:text="AR Devices"
+                            android:textColor="#1B1E33"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </FrameLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardARAssistant"
+                    android:layout_width="0dp"
+                    android:layout_height="138dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#DDEBA0"
+                    app:cardElevation="3dp">
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="14dp">
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="top|start"
+                            android:background="@drawable/bg_dashboard_icon_dark"
+                            android:gravity="center"
+                            android:text="🤖"
+                            android:textSize="18sp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:text="↗"
+                            android:textColor="#2A2E45"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|start"
+                            android:text="AR Assistant"
+                            android:textColor="#1B1E33"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </FrameLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+            <!-- Row 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardDeviceDemo"
+                    android:layout_width="0dp"
+                    android:layout_height="138dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#F3BFD9"
+                    app:cardElevation="3dp">
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="14dp">
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="top|start"
+                            android:background="@drawable/bg_dashboard_icon_dark"
+                            android:gravity="center"
+                            android:text="🧪"
+                            android:textSize="18sp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:text="↗"
+                            android:textColor="#2A2E45"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|start"
+                            android:text="Device Demo"
+                            android:textColor="#1B1E33"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </FrameLayout>
+                </androidx.cardview.widget.CardView>
+
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardQuiz"
+                    android:layout_width="0dp"
+                    android:layout_height="138dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#C9B8F0"
+                    app:cardElevation="3dp">
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="14dp">
+                        <TextView
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:layout_gravity="top|start"
+                            android:background="@drawable/bg_dashboard_icon_dark"
+                            android:gravity="center"
+                            android:text="🎯"
+                            android:textSize="18sp"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="top|end"
+                            android:text="↗"
+                            android:textColor="#2A2E45"
+                            android:textSize="18sp"
+                            android:textStyle="bold"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|start"
+                            android:text="Quiz"
+                            android:textColor="#1B1E33"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+                    </FrameLayout>
+                </androidx.cardview.widget.CardView>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </FrameLayout>
+
+</LinearLayout>

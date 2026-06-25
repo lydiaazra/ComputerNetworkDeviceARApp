@@ -70,12 +70,12 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="28dp"
-        android:text="Get Started"
+        android:text="Start"
         android:textAllCaps="false"
         android:textColor="#FFFFFF"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:backgroundTint="#6C4CF1"
-        app:cornerRadius="18dp" />
+        app:backgroundTint="#3D6BA8"
+        app:cornerRadius="6dp" />
 
 </RelativeLayout>

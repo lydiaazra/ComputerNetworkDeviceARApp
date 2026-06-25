@@ -38,7 +38,7 @@
 
         <activity android:name=".LoginActivity" android:exported="false"/>
         <activity android:name=".RegisterActivity" android:exported="false"/>
-        <activity android:name=".MainMenuActivity" android:exported="false"/>
+        <activity android:name=".DashboardActivity" android:exported="false"/>
         <activity android:name=".QuizLevelActivity" android:exported="false"/>
         <activity android:name=".ResultActivity" android:exported="false"/>
         <activity android:name=".DeviceDisplay" android:exported="false"/>
@@ -48,6 +48,8 @@
             android:name=".CombinedARActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"/>
+
+        <activity android:name=".ChatHistoryActivity" android:exported="false"/>
 
         <activity
             android:name=".ARQuizActivity"

@@ -186,7 +186,7 @@ public class ResultActivity extends AppCompatActivity {
         }
 
         btnBackToMenu.setOnClickListener(v -> {
-            Intent intent = new Intent(this, MainMenuActivity.class);
+            Intent intent = new Intent(this, DashboardActivity.class);
             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(intent);
             finish();

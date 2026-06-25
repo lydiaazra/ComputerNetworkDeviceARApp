@@ -427,7 +427,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="›"
-                    android:textColor="#F39C12"
+                    android:textColor="#8FA5C3"
                     android:textSize="28sp"/>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
