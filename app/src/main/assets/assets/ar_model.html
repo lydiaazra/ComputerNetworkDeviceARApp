@@ -95,7 +95,7 @@
               model.scale.setScalar(sc);
               model.position.sub(ctr.multiplyScalar(sc));
               pivot.add(model);
-              setStatus('Drag to rotate  •  Pinch to zoom');
+              setStatus('');
               if (window.AndroidBridge) AndroidBridge.onModelLoaded('device');
             },
             function(err) {
@@ -222,4 +222,4 @@
     });
 </script>
 </body>
-</html>`
+</html>

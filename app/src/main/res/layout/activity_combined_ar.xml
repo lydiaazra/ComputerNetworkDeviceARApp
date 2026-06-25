@@ -59,40 +59,24 @@
         app:layout_constraintBottom_toTopOf="@id/bottomPanel"
         app:layout_constraintStart_toStartOf="parent"/>
 
-    <!-- Device name label — top right -->
+    <!-- Device name label — bottom center of model viewer -->
     <TextView
         android:id="@+id/tvDeviceName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="10dp"
         android:background="#AA081120"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="5dp"
+        android:paddingBottom="5dp"
         android:text="Router"
         android:textColor="#7EDCFF"
         android:textSize="12sp"
         android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/guideline"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
-
-    <!-- History button — top left -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnHistory"
-        android:layout_width="wrap_content"
-        android:layout_height="32dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginStart="8dp"
-        android:text="📜 History"
-        android:textAllCaps="false"
-        android:textColor="#FFFFFF"
-        android:textSize="11sp"
-        app:backgroundTint="#2A4A7F"
-        app:cornerRadius="10dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"/>
 
     <!-- Avatar status label -->
     <TextView
@@ -187,31 +171,46 @@
 
         </LinearLayout>
 
-        <!-- Action buttons: Change Device, Ask, Speak, Back -->
+        <!-- Action buttons: Device(icon), History(icon), Ask, Speak, Back(icon) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnChangeDevice"
-                android:layout_width="0dp"
+                android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_weight="1"
-                android:text="Device"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                app:backgroundTint="#2A4A7F"
+                android:text=""
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:contentDescription="Change device"
+                app:backgroundTint="#1A2C4D"
                 app:cornerRadius="6dp"
                 app:icon="@android:drawable/ic_menu_sort_by_size"
-                app:iconSize="12dp"
-                app:iconTint="#7EDCFF"
-                app:iconPadding="3dp"
-                app:iconGravity="textStart"/>
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="16dp"
+                app:iconTint="#7EDCFF"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnHistory"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="6dp"
+                android:text=""
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:contentDescription="Chat history"
+                app:backgroundTint="#1A2C4D"
+                app:cornerRadius="6dp"
+                app:icon="@android:drawable/ic_menu_recent_history"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="16dp"
+                app:iconTint="#7EDCFF"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnAsk"
@@ -222,7 +221,7 @@
                 android:text="Ask"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 app:backgroundTint="#2A4A7F"
                 app:cornerRadius="6dp"/>
 
@@ -235,22 +234,26 @@
                 android:text="Speak"
                 android:textAllCaps="false"
                 android:textColor="#FFFFFF"
-                android:textSize="11sp"
+                android:textSize="12sp"
                 app:backgroundTint="#2A4A7F"
                 app:cornerRadius="6dp"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnBack"
-                android:layout_width="0dp"
+                android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_weight="1"
                 android:layout_marginStart="6dp"
-                android:text="Back"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="11sp"
-                app:backgroundTint="#2A4A7F"
-                app:cornerRadius="6dp"/>
+                android:text=""
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:contentDescription="Back"
+                app:backgroundTint="#5C2230"
+                app:cornerRadius="6dp"
+                app:icon="@android:drawable/ic_menu_revert"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="16dp"
+                app:iconTint="#FF8FA0"/>
 
         </LinearLayout>
     </LinearLayout>
