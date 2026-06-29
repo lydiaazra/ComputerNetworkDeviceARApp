@@ -72,7 +72,7 @@
                             android:gravity="center"/>
                     </FrameLayout>
 
-                    <!-- Title + subtitle -->
+                    <!-- Title -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -86,13 +86,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Build your basics"
-                            android:textColor="#8FA5C3"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
                     <!-- Best score badge -->
@@ -223,13 +216,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Test your knowledge"
-                            android:textColor="#8FA5C3"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -347,13 +333,6 @@
                             android:textSize="15sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"/>
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Challenge your limits"
-                            android:textColor="#8FA5C3"
-                            android:textSize="12sp"
-                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
 
                     <LinearLayout
@@ -465,7 +444,7 @@
             android:id="@+id/btnBack"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginBottom="32dp"
             android:text="Back"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"

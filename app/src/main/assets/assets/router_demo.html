@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Router Lab</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+        html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
+        body{display:flex;flex-direction:column}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+        .title{color:#fff;font-size:14px;font-weight:600;flex:1}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
+        .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
+        .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
+        .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
+        .chip:active{background:#388BFD22;border-color:#1F6FEB}
+        .canvas-wrap{flex:1;position:relative;overflow:hidden}
+        #canvas{display:block;touch-action:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
+        .hint-icon{font-size:36px;margin-bottom:8px}
+        .hint-text{color:#8FA5C3;font-size:13px}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#1F6FEB;color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#0F9E7022;color:#5DCAA5;border:1px solid #0F9E7044}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .info-icon{font-size:20px}
+        .info-text{flex:1}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4}
+    </style>
+</head>
+<body>
+<div class="topbar" id="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <span class="title">🔀 Router — Interactive Lab</span>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
+</div>
+<div class="toolbar" id="toolbar" style="display:none">
+    <span class="tb-label">ADD:</span>
+    <div class="chip" onclick="addDevice('router')">🔀 Router</div>
+    <div class="chip" onclick="addDevice('pc')">💻 PC</div>
+    <div class="chip" onclick="clearAll()">🗑️ Clear</div>
+</div>
+<div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="hint" id="hint">
+        <div class="hint-icon">🔀</div>
+        <div class="hint-text">Add a Router and PCs from the toolbar<br>connect devices from different networks to the router</div>
+    </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap a device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
+</div>
+<div class="info-bar" id="infobar">
+    <span class="info-icon" id="infoIcon">🔀</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">Router Lab</div>
+        <div class="info-sub" id="infoSub">Routes packets between different networks using IP addresses. Tap the Router to see its routing table!</div>
+    </div>
+</div>
+
+<script>
+    const canvas=document.getElementById('canvas');
+    const ctx=canvas.getContext('2d');
+    const SC=1.6;
+    let isDemoMode=true;
+    let pcCount=0;
+
+    function resize(){
+      const th=document.getElementById('topbar').getBoundingClientRect().height;
+      const tbh=document.getElementById('toolbar').getBoundingClientRect().height;
+      const ih=document.getElementById('infobar').getBoundingClientRect().height;
+      canvas.width=window.innerWidth;
+      canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
+      if(isDemoMode) loadDemo(); else draw();
+    }
+
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      packets=[];
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('🔀','Try It!','Add a Router and PCs from two different networks, then connect them to see routing in action.');
+      }
+    }
+
+    const DEFS={
+      router:{label:'Router',color:'#1F6FEB',info:'Routes packets between different networks using IP addresses. Operates at Layer 3 (Network), making forwarding decisions based on the destination IP.'},
+      pc:    {label:'PC',     color:'#7EDCFF',info:'End-user device on a network segment. Sends traffic to the Router whenever the destination is on a different network.'}
+    };
+
+    function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+
+    function drawDev(d){
+      ctx.save();ctx.translate(d.x,d.y);ctx.scale(SC,SC);
+      switch(d.type){
+        case 'router':
+          ctx.fillStyle='#0D2850';rr(ctx,-22,-12,44,24,3);ctx.fill();
+          ctx.fillStyle='#1A5FAD';rr(ctx,-20,-10,40,20,2);ctx.fill();
+          ctx.fillStyle='#2A82D4';
+          ctx.beginPath();ctx.moveTo(-20,-10);ctx.lineTo(-14,-19);ctx.lineTo(24,-19);ctx.lineTo(20,-10);ctx.closePath();ctx.fill();
+          ctx.strokeStyle='#7ECDF5';ctx.lineWidth=1.5;
+          for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(-8+i*8,-10);ctx.lineTo(-9+i*8,-21);ctx.stroke();}
+          for(let i=0;i<4;i++){ctx.fillStyle='#061828';rr(ctx,-15+i*9,-1,7,5,1);ctx.fill();ctx.fillStyle=i<2?'#00FF88':'#FFB300';ctx.beginPath();ctx.arc(-11.5+i*9,1.5,1.3,0,Math.PI*2);ctx.fill();}
+          break;
+        case 'pc':
+          ctx.fillStyle='#1A2060';rr(ctx,-20,-24,40,30,3);ctx.fill();
+          ctx.fillStyle='#4A6AE0';rr(ctx,-17,-21,34,23,2);ctx.fill();
+          ctx.fillStyle='rgba(120,160,255,0.5)';for(let i=0;i<3;i++){rr(ctx,-12,-17+i*7,24,4,1);ctx.fill();}
+          ctx.fillStyle='#1A2060';rr(ctx,-3,6,6,6,1);ctx.fill();rr(ctx,-10,12,20,4,2);ctx.fill();
+          break;
+      }
+      ctx.restore();
+    }
+
+    function drawRoutingTable(rt){
+      const bw=220,bh=140,bx=rt.x+50,by=rt.y-84;
+      ctx.save();
+      ctx.fillStyle='rgba(8,18,36,0.97)';rr(ctx,bx,by,bw,bh,10);ctx.fill();
+      ctx.strokeStyle='#1F6FEB';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#7ECDF5';ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText('🔀 Routing Table',bx+10,by+8);
+      ctx.strokeStyle='#1F6FEB44';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+22);ctx.lineTo(bx+bw-8,by+22);ctx.stroke();
+      ctx.fillStyle='#8FA5C3';ctx.font='bold 8px system-ui';ctx.fillText('Destination Network   Interface',bx+10,by+28);
+      ctx.strokeStyle='#1F6FEB22';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+38);ctx.lineTo(bx+bw-8,by+38);ctx.stroke();
+      const networks=getRouterNetworks(rt);
+      networks.forEach((n,i)=>{
+        const y=by+44+i*20;
+        ctx.fillStyle='#5DCAA5';ctx.font='bold 8px monospace';ctx.fillText(n.subnet,bx+10,y);
+        ctx.fillStyle='#C9D1D9';ctx.font='8px monospace';ctx.fillText(n.iface,bx+150,y);
+      });
+      ctx.restore();
+    }
+
+    function getRouterNetworks(rt){
+      const conns=cables.filter(c=>c.a===rt.id||c.b===rt.id);
+      return conns.map((c,i)=>{
+        const otherId=c.a===rt.id?c.b:c.a;
+        const other=devices.find(d=>d.id===otherId);
+        return{subnet:'192.168.'+(i+1)+'.0/24',iface:'eth'+i,devId:otherId};
+      });
+    }
+
+    function drawConnectRing(d,t){
+      const r=HIT+10+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle=DEFS[d.type].color;ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+    }
+
+    function drawCable(a,b){
+      const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
+      const ux=dx/len,uy=dy/len,g=HIT*0.88;
+      ctx.save();ctx.strokeStyle='#1F6FEB88';ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(a.x+ux*g,a.y+uy*g);ctx.lineTo(b.x-ux*g,b.y-uy*g);ctx.stroke();
+      const hl=10,hw=5,ex=b.x-ux*g-ux*hl,ey=b.y-uy*g-uy*hl;
+      ctx.fillStyle='#1F6FEB88';
+      ctx.beginPath();ctx.moveTo(b.x-ux*g,b.y-uy*g);ctx.lineTo(ex-uy*hw,ey+ux*hw);ctx.lineTo(ex+uy*hw,ey-ux*hw);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+
+    const HIT=36*SC*0.65;
+    let packets=[],spawnTimer=0;
+    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
+
+    function spawnRoutedPacket(rt){
+      const networks=getRouterNetworks(rt);
+      if(networks.length<2)return;
+      if(packets.length>0)return;
+      const fromIdx=Math.floor(Math.random()*networks.length);
+      let toIdx=Math.floor(Math.random()*networks.length);
+      if(toIdx===fromIdx) toIdx=(toIdx+1)%networks.length;
+      const fromDev=devices.find(d=>d.id===networks[fromIdx].devId);
+      const toDev=devices.find(d=>d.id===networks[toIdx].devId);
+      if(!fromDev||!toDev)return;
+      packets.push({x:fromDev.x,y:fromDev.y,tx:rt.x,ty:rt.y,progress:0,
+        phase:'in',fromId:fromDev.id,toId:toDev.id,speed:0.012,id:Math.random()});
+    }
+
+    function updatePackets(rt){
+      const newPkts=[];
+      packets=packets.filter(p=>{
+        p.progress+=p.speed;
+        if(p.progress>=1){
+          if(p.phase==='in'){
+            const toDev=devices.find(d=>d.id===p.toId);
+            if(toDev) newPkts.push({x:rt.x,y:rt.y,tx:toDev.x,ty:toDev.y,progress:0,
+              phase:'out',fromId:p.fromId,toId:p.toId,speed:0.012,id:Math.random()});
+          } else {
+            setInfo('💻','Delivered!','Packet routed from one network to another via IP address lookup.');
+          }
+          return false;
+        }
+        return true;
+      });
+      packets.push(...newPkts);
+    }
+
+    function draw(){
+      if(!canvas.width||!canvas.height)return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(100,140,200,0.07)';
+      for(let x=24;x<canvas.width;x+=32)for(let y=24;y<canvas.height;y+=32){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+
+      const rt=devices.find(d=>d.type==='router');
+
+      if(rt){
+        const networks=getRouterNetworks(rt);
+        if(networks.length>=2){
+          spawnTimer++;
+          if(spawnTimer%100===0) spawnRoutedPacket(rt);
+          updatePackets(rt);
+        }
+      }
+
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
+        drawCable(a,b);
+      });
+
+      packets.forEach(p=>{
+        const px=p.x+(p.tx-p.x)*p.progress,py=p.y+(p.ty-p.y)*p.progress;
+        ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);
+        ctx.fillStyle=p.phase==='in'?'#FFD040':'#00FF88';ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,0.6)';ctx.lineWidth=1.2;ctx.stroke();
+        if(p.progress>0.3&&p.progress<0.85){
+          ctx.save();ctx.font='bold 8px system-ui';ctx.textAlign='center';
+          ctx.fillStyle=p.phase==='in'?'#FFD040':'#00FF88';ctx.textBaseline='middle';
+          ctx.fillText(p.phase==='in'?'🔍 Checking IP':'📤 Routed!',px,py-14);
+          ctx.restore();
+        }
+      });
+
+      if(selected&&selected.type==='router') drawRoutingTable(selected);
+      if(selected) drawConnectRing(selected,animT);
+
+      devices.forEach(d=>{
+        const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
+        ctx.save();ctx.shadowColor='rgba(0,0,0,0.35)';ctx.shadowBlur=14;ctx.shadowOffsetY=5;drawDev(d);ctx.restore();
+        const lbl=d.customLabel||def.label;
+        const ly=d.y+HIT*0.78;
+        ctx.font='bold 11px system-ui';ctx.textAlign='center';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(8,14,28,0.92)';rr(ctx,d.x-tw/2-6,ly-9,tw+12,18,3);ctx.fill();
+        ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(lbl,d.x,ly);
+      });
+    }
+
+    function animate(){animT+=0.016;if(devices.length>0)draw();requestAnimationFrame(animate);}
+    animate();
+
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function hit(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hit(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)del(d);},700);}}
+    function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
+    function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);tap(x,y);}dragging=null;dragMoved=false;}
+    canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+    function tap(x,y){
+      const d=hit(x,y);
+      if(d){
+        if(selected&&selected.id!==d.id){
+          if(!isDemoMode){
+            if(!cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id))){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!',(selected.customLabel||DEFS[selected.type].label)+' ↔ '+(d.customLabel||DEFS[d.type].label));
+            }
+          }
+          selected=null;showBanner(false);
+        } else {
+          selected=d;
+          if(!isDemoMode) showBanner(true);
+          if(d.type==='router') setInfo('🔀',d.customLabel||'Router',DEFS.router.info+' Tap to see the routing table.');
+          else setInfo('💻',d.customLabel||DEFS[d.type].label,DEFS[d.type].info+(isDemoMode?'':' Tap the Router to connect.'));
+        }
+      } else {
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('🔀','Router Lab','Packets travel between different networks through the Router. Tap "Try It" to build your own!');
+        else setInfo('🔀','Try Mode','Add a Router and PCs from two networks, then connect them.');
+      }
+      draw();
+    }
+
+    function del(d){devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();}
+
+    function addDevice(type){
+      if(isDemoMode)return;
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*80,y:canvas.height/2+(Math.random()-0.5)*60};
+      if(type==='pc'){dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;}
+      if(type==='router') dev.customLabel='Router';
+      devices.push(dev);draw();
+    }
+
+    function loadDemo(){
+      devices=[];cables=[];selected=null;packets=[];spawnTimer=0;showBanner(false);
+      document.getElementById('hint').style.display='none';
+      const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2;
+
+      const rtId=nextId++;devices.push({id:rtId,type:'router',customLabel:'Router',x:cx,y:cy});
+      const pcA1=nextId++;devices.push({id:pcA1,type:'pc',customLabel:'PC A',x:cx-W*0.3,y:cy-H*0.2});
+      const pcA2=nextId++;devices.push({id:pcA2,type:'pc',customLabel:'PC B',x:cx-W*0.3,y:cy+H*0.2});
+      const pcB1=nextId++;devices.push({id:pcB1,type:'pc',customLabel:'PC C',x:cx+W*0.3,y:cy-H*0.2});
+      const pcB2=nextId++;devices.push({id:pcB2,type:'pc',customLabel:'PC D',x:cx+W*0.3,y:cy+H*0.2});
+
+      cables=[{a:rtId,b:pcA1},{a:rtId,b:pcA2},{a:rtId,b:pcB1},{a:rtId,b:pcB2}];
+      setInfo('🔀','Router — Connecting Networks','PC A/B are on Network 1, PC C/D are on Network 2. Watch the Router forward packets between them! Tap "Try It" to build your own.');
+      draw();
+    }
+
+    function clearAll(){devices=[];cables=[];selected=null;packets=[];pcCount=0;spawnTimer=0;showBanner(false);draw();}
+    function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
+    function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
+
+    window.addEventListener('resize',resize);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
+</script>
+</body>
+</html>

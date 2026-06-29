@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>NIC Lab</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+        html,body{width:100%;height:100%;overflow:hidden;background:#0D1117;font-family:system-ui,sans-serif}
+        body{display:flex;flex-direction:column}
+        .topbar{background:#161B22;padding:32px 14px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #21262D;flex-shrink:0}
+        .back-btn{background:#21262D;border:none;color:#7EDCFF;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer}
+        .title{color:#fff;font-size:14px;font-weight:600;flex:1}
+        .mode-btn{border:none;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+        .mode-btn.try{background:#0F9E70;color:#fff}
+        .mode-btn.demo{background:#1F6FEB;color:#fff}
+        .toolbar{background:#161B22;border-bottom:1px solid #21262D;padding:8px 12px;display:flex;gap:8px;align-items:center;flex-shrink:0;overflow-x:auto}
+        .tb-label{color:#8FA5C3;font-size:10px;font-weight:600;white-space:nowrap}
+        .chip{background:#21262D;border:1px solid #30363D;border-radius:8px;padding:6px 12px;color:#C9D1D9;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;flex-shrink:0}
+        .chip:active{background:#388BFD22;border-color:#1F6FEB}
+        .canvas-wrap{flex:1;position:relative;overflow:hidden}
+        #canvas{display:block;touch-action:none}
+        .hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;display:none}
+        .hint-icon{font-size:36px;margin-bottom:8px}
+        .hint-text{color:#8FA5C3;font-size:13px}
+        .connect-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#7EDCFF;color:#08111F;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;display:none;white-space:nowrap}
+        .mode-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;pointer-events:none;white-space:nowrap}
+        .mode-banner.demo-mode{background:#1F6FEB22;color:#7EDCFF;border:1px solid #1F6FEB44}
+        .mode-banner.try-mode{background:#7EDCFF22;color:#7EDCFF;border:1px solid #7EDCFF44}
+        .info-bar{background:#161B22;border-top:1px solid #21262D;padding:10px 14px 60px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .info-icon{font-size:20px}
+        .info-text{flex:1}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4}
+    </style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <span class="title">💾 NIC — Interactive Lab</span>
+    <button class="mode-btn try" id="modeBtn" onclick="toggleMode()">Try It</button>
+</div>
+
+<div class="toolbar" id="toolbar" style="display:none">
+    <span class="tb-label">ADD:</span>
+    <div class="chip" onclick="addDevice('switch')">🔌 Switch</div>
+    <div class="chip" onclick="addDevice('pc')">💻 PC</div>
+    <div class="chip" onclick="clearAll()">🗑️ Clear</div>
+</div>
+
+<div class="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div class="hint" id="hint">
+        <div class="hint-icon">💾</div>
+        <div class="hint-text">Add a Switch and PCs from the toolbar<br>then tap two devices to connect them</div>
+    </div>
+    <div class="connect-banner" id="connectBanner">📡 Tap a device to connect</div>
+    <div class="mode-banner demo-mode" id="modeBanner">👁 Demo Mode</div>
+</div>
+
+<div class="info-bar" id="infobar">
+    <span class="info-icon" id="infoIcon">💾</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">NIC Lab</div>
+        <div class="info-sub" id="infoSub">Tap a PC to see its NIC details. Watch digital data convert to a signal on the cable!</div>
+    </div>
+</div>
+
+<script>
+    const canvas=document.getElementById('canvas');
+    const ctx=canvas.getContext('2d');
+    let isDemoMode=true;
+    let pcCount=0;
+    let nicMacs={};
+
+    function resize(){
+      const th=document.getElementById('topbar').getBoundingClientRect().height;
+      const tbh=document.getElementById('toolbar').getBoundingClientRect().height;
+      const ih=document.getElementById('infobar').getBoundingClientRect().height;
+      canvas.width=window.innerWidth;
+      canvas.height=Math.max(100,window.innerHeight-th-tbh-ih);
+      if(isDemoMode) loadDemo(); else draw();
+    }
+
+    function toggleMode(){
+      isDemoMode=!isDemoMode;
+      const btn=document.getElementById('modeBtn');
+      const bar=document.getElementById('modeBanner');
+      const toolbar=document.getElementById('toolbar');
+      if(isDemoMode){
+        btn.textContent='Try It';btn.className='mode-btn try';
+        bar.textContent='👁 Demo Mode';bar.className='mode-banner demo-mode';
+        toolbar.style.display='none';
+        loadDemo();
+      } else {
+        btn.textContent='Demo';btn.className='mode-btn demo';
+        bar.textContent='✏️ Try Mode — add & connect devices';bar.className='mode-banner try-mode';
+        toolbar.style.display='flex';
+        clearAll();
+        document.getElementById('hint').style.display='flex';
+        setInfo('💾','Try It!','Add a Switch and PCs, then connect them to see each NIC convert data into a signal.');
+      }
+    }
+
+    const DEFS={
+      switch:{label:'Switch',color:'#3EC26E',info:'Forwards frames between PCs using MAC addresses read from each device\'s NIC.'},
+      pc:    {label:'PC',     color:'#7EDCFF',info:'Each PC has a Network Interface Card (NIC) — hardware that provides a unique MAC address and converts data into signals for transmission.'}
+    };
+
+    function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();}
+
+    function drawPC(x,y,sc=1){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#1A2060';rr(ctx,-20,-24,40,30,4);ctx.fill();
+      ctx.fillStyle='#4A6AE0';rr(ctx,-17,-21,34,22,2);ctx.fill();
+      ctx.fillStyle='rgba(120,160,255,0.5)';
+      for(let i=0;i<3;i++){rr(ctx,-13,-18+i*6,24,3,1);ctx.fill();}
+      ctx.fillStyle='#1A2060';
+      rr(ctx,-3,6,6,6,1);ctx.fill();rr(ctx,-10,12,20,4,2);ctx.fill();
+      // NIC indicator strip
+      ctx.fillStyle='#00FF8888';rr(ctx,-17,-21,34,5,1);ctx.fill();
+      ctx.restore();
+    }
+
+    function drawSwitch(x,y,sc=1){
+      ctx.save();ctx.translate(x,y);ctx.scale(sc,sc);
+      ctx.fillStyle='#0D2010';rr(ctx,-30,-11,60,22,3);ctx.fill();
+      ctx.fillStyle='#2A6B20';rr(ctx,-28,-9,56,18,2);ctx.fill();
+      for(let i=0;i<8;i++){
+        ctx.fillStyle='#0D1A0D';rr(ctx,-24+i*6.5,-5,5.5,5,1);ctx.fill();
+        ctx.fillStyle=i<5?'#00FF88':'#333';ctx.beginPath();ctx.arc(-21.5+i*6.5,-2.5,1.5,0,Math.PI*2);ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawDigitalToWave(x,y,t){
+      // Left half: digital bits, right half: converted analog/electrical wave
+      ctx.save();
+      const w=64,h=12;
+      ctx.strokeStyle='#FFB300';ctx.lineWidth=2;ctx.beginPath();
+      const bits=[0,1,1,0,1,0];
+      bits.forEach((v,i)=>{
+        const sx=x-w/2+(i/bits.length)*(w/2),sy=y+(v===1?-h:0);
+        const ex=x-w/2+((i+1)/bits.length)*(w/2);
+        if(i===0)ctx.moveTo(sx,sy);else ctx.lineTo(sx,sy);ctx.lineTo(ex,sy);
+      });
+      ctx.stroke();
+
+      ctx.strokeStyle='#00FF88';ctx.lineWidth=2;ctx.beginPath();
+      for(let i=0;i<=32;i++){
+        const wx=x+i,wy=y-6*Math.sin((i/32)*Math.PI*4+t);
+        i===0?ctx.moveTo(wx,wy):ctx.lineTo(wx,wy);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle='#FFB300';ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillText('Digital bits',x-16,y+16);
+      ctx.fillStyle='#00FF88';ctx.fillText('Signal',x+16,y+16);
+      ctx.restore();
+    }
+
+    function drawNicPopup(pc){
+      const mac=nicMacs[pc.id];
+      const bw=190,bh=110,bx=pc.x+34,by=pc.y-76;
+      ctx.save();
+      ctx.fillStyle='rgba(8,14,28,0.97)';rr(ctx,bx,by,bw,bh,10);ctx.fill();
+      ctx.strokeStyle='#7EDCFF';ctx.lineWidth=1.5;ctx.stroke();
+      ctx.fillStyle='#7EDCFF';ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText('💾 Network Interface Card',bx+10,by+8);
+      ctx.strokeStyle='#7EDCFF44';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(bx+8,by+22);ctx.lineTo(bx+bw-8,by+22);ctx.stroke();
+
+      const rows=[
+        ['MAC Address', mac],
+        ['OSI Layer', 'Layer 2 (Data Link)'],
+        ['Link Speed', '1 Gbps'],
+        ['Function', 'Connects device to network']
+      ];
+      rows.forEach((r,i)=>{
+        const y=by+34+i*18;
+        ctx.fillStyle='#8FA5C3';ctx.font='8px system-ui';ctx.fillText(r[0]+':',bx+10,y);
+        ctx.fillStyle='#C9D1D9';ctx.font='bold 8px monospace';ctx.fillText(r[1],bx+82,y);
+      });
+      ctx.restore();
+    }
+
+    function randomMac(){
+      const hex=()=>Math.floor(Math.random()*256).toString(16).padStart(2,'0').toUpperCase();
+      return [hex(),hex(),hex(),hex(),hex(),hex()].join(':');
+    }
+
+    function drawConnectRing(d,t){
+      const r=38+Math.sin(t*6)*5;
+      ctx.save();ctx.strokeStyle=DEFS[d.type].color;ctx.lineWidth=2;
+      ctx.globalAlpha=0.6+Math.sin(t*6)*0.3;ctx.setLineDash([5,4]);
+      ctx.beginPath();ctx.arc(d.x,d.y,r,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.restore();
+    }
+
+    const HIT=34;
+    let devices=[],cables=[],selected=null,dragging=null,dragOx=0,dragOy=0,dragMoved=false,longTimer=null,nextId=1,animT=0;
+    let activePacket=null;
+
+    function showBanner(show){document.getElementById('connectBanner').style.display=show?'block':'none';}
+
+    function spawnPacket(){
+      const pcs=devices.filter(d=>d.type==='pc');
+      const sw=devices.find(d=>d.type==='switch');
+      if(!sw||pcs.length<2||activePacket)return;
+      const fromIdx=Math.floor(Math.random()*pcs.length);
+      let toIdx=Math.floor(Math.random()*pcs.length);
+      if(toIdx===fromIdx)toIdx=(toIdx+1)%pcs.length;
+      const fromConnected=cables.find(c=>(c.a===pcs[fromIdx].id||c.b===pcs[fromIdx].id)&&(c.a===sw.id||c.b===sw.id));
+      const toConnected=cables.find(c=>(c.a===pcs[toIdx].id||c.b===pcs[toIdx].id)&&(c.a===sw.id||c.b===sw.id));
+      if(!fromConnected||!toConnected)return;
+      activePacket={from:pcs[fromIdx],via:sw,to:pcs[toIdx],progress:0,phase:'in'};
+    }
+
+    function updatePacket(){
+      if(!activePacket)return;
+      activePacket.progress+=0.012;
+      if(activePacket.progress>=1){
+        if(activePacket.phase==='in'){activePacket.phase='out';activePacket.progress=0;}
+        else activePacket=null;
+      }
+    }
+
+    function draw(){
+      if(!canvas.width||!canvas.height)return;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='rgba(100,140,200,0.1)';
+      for(let x=20;x<canvas.width;x+=30)for(let y=20;y<canvas.height;y+=30){ctx.beginPath();ctx.arc(x,y,1.5,0,Math.PI*2);ctx.fill();}
+
+      cables.forEach(c=>{
+        const a=devices.find(d=>d.id===c.a),b=devices.find(d=>d.id===c.b);if(!a||!b)return;
+        const dx=b.x-a.x,dy=b.y-a.y,len=Math.sqrt(dx*dx+dy*dy);if(len<1)return;
+        const ux=dx/len,uy=dy/len;
+        const ax=a.x+ux*HIT,ay=a.y+uy*HIT,bx=b.x-ux*HIT,by=b.y-uy*HIT;
+
+        ctx.save();ctx.strokeStyle='#7EDCFF';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(bx,by);ctx.stroke();
+        const hl=8,hw=4,ex=bx-ux*hl,ey=by-uy*hl;
+        ctx.fillStyle='#7EDCFF';ctx.beginPath();ctx.moveTo(bx,by);
+        ctx.lineTo(ex-uy*hw,ey+ux*hw);ctx.lineTo(ex+uy*hw,ey-ux*hw);ctx.closePath();ctx.fill();
+        ctx.restore();
+
+        const pcEnd=a.type==='pc'?a:(b.type==='pc'?b:null);
+        if(pcEnd){
+          const mx=(a.x+b.x)/2,my=(a.y+b.y)/2-30;
+          drawDigitalToWave(mx,my,animT);
+        }
+      });
+
+      if(isDemoMode){
+        if(!activePacket && Math.floor(animT*60)%90===0) spawnPacket();
+        updatePacket();
+      }
+
+      if(activePacket){
+        const{from,via,to,progress,phase}=activePacket;
+        const sx=phase==='in'?from.x:via.x, sy=phase==='in'?from.y:via.y;
+        const ex=phase==='in'?via.x:to.x,   ey=phase==='in'?via.y:to.y;
+        const px=sx+(ex-sx)*progress,py=sy+(ey-sy)*progress;
+        ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
+        ctx.fillStyle=phase==='in'?'#FFD040':'#00FF88';ctx.fill();
+        ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+      }
+
+      if(selected) drawConnectRing(selected,animT);
+
+      devices.forEach(d=>{
+        const def=DEFS[d.type],isSel=selected&&selected.id===d.id;
+        ctx.save();ctx.shadowColor='rgba(0,0,0,0.3)';ctx.shadowBlur=10;ctx.shadowOffsetY=4;
+        if(d.type==='pc') drawPC(d.x,d.y,1);
+        else drawSwitch(d.x,d.y,1);
+        ctx.restore();
+        const lbl=d.customLabel||def.label;
+        ctx.font='bold 10px system-ui';ctx.textAlign='center';
+        const tw=ctx.measureText(lbl).width;
+        ctx.fillStyle='rgba(13,17,23,0.9)';rr(ctx,d.x-tw/2-5,d.y+22,tw+10,16,3);ctx.fill();
+        ctx.strokeStyle=isSel?def.color:'#30363D';ctx.lineWidth=1;ctx.stroke();
+        ctx.fillStyle=isSel?def.color:'#C9D1D9';ctx.textBaseline='middle';ctx.fillText(lbl,d.x,d.y+30);
+      });
+
+      if(selected&&selected.type==='pc') drawNicPopup(selected);
+    }
+
+    function animate(){animT+=0.05;if(devices.length>0)draw();requestAnimationFrame(animate);}
+    animate();
+
+    function cp(e){const r=canvas.getBoundingClientRect(),s=e.changedTouches?e.changedTouches[0]:e.touches?e.touches[0]:e;return{x:(s.clientX-r.left)*(canvas.width/r.width),y:(s.clientY-r.top)*(canvas.height/r.height)};}
+    function hitDevice(x,y){return devices.find(d=>Math.hypot(x-d.x,y-d.y)<HIT);}
+    function onDown(e){const{x,y}=cp(e);dragMoved=false;const d=hitDevice(x,y);if(d){dragging=d;dragOx=x-d.x;dragOy=y-d.y;longTimer=setTimeout(()=>{if(!dragMoved&&!isDemoMode)deleteDevice(d);},700);}}
+    function onMove(e){e.preventDefault();if(!dragging)return;const{x,y}=cp(e);if(Math.abs(x-(dragging.x+dragOx))>5||Math.abs(y-(dragging.y+dragOy))>5)dragMoved=true;dragging.x=x-dragOx;dragging.y=y-dragOy;draw();}
+    function onUp(e){clearTimeout(longTimer);if(dragging&&!dragMoved){const{x,y}=cp(e);handleTap(x,y);}dragging=null;dragMoved=false;}
+    canvas.addEventListener('mousedown',onDown);canvas.addEventListener('mousemove',onMove);canvas.addEventListener('mouseup',onUp);
+    canvas.addEventListener('touchstart',e=>{e.preventDefault();onDown(e);},{passive:false});
+    canvas.addEventListener('touchmove',e=>{e.preventDefault();onMove(e);},{passive:false});
+    canvas.addEventListener('touchend',e=>{e.preventDefault();onUp(e);},{passive:false});
+
+    function handleTap(x,y){
+      const d=hitDevice(x,y);
+      if(d){
+        if(selected&&selected.id!==d.id){
+          if(!isDemoMode){
+            const ex=cables.find(c=>(c.a===selected.id&&c.b===d.id)||(c.b===selected.id&&c.a===d.id));
+            if(!ex){
+              cables.push({a:selected.id,b:d.id});
+              document.getElementById('hint').style.display='none';
+              setInfo('🔗','Connected!',DEFS[selected.type].label+' ↔ '+DEFS[d.type].label+' — Watch the NIC convert data to a signal!');
+            }
+          }
+          selected=null;showBanner(false);
+        } else {
+          selected=d;
+          if(!isDemoMode) showBanner(true);
+          if(d.type==='pc') setInfo('💾',d.customLabel||'PC',DEFS.pc.info+' Tap to see NIC details.');
+          else setInfo('🔌',d.customLabel||'Switch',DEFS.switch.info+(isDemoMode?'':' Tap another device to connect.'));
+        }
+      } else {
+        selected=null;showBanner(false);
+        if(isDemoMode) setInfo('💾','NIC Lab','Each PC\'s NIC converts digital data into a signal for the cable. Tap "Try It" to build your own!');
+        else setInfo('💾','Try Mode','Add a Switch and PCs, then connect them to see each NIC at work.');
+      }
+      draw();
+    }
+
+    function deleteDevice(d){
+      devices=devices.filter(x=>x.id!==d.id);cables=cables.filter(c=>c.a!==d.id&&c.b!==d.id);
+      delete nicMacs[d.id];
+      if(selected&&selected.id===d.id){selected=null;showBanner(false);}draw();
+    }
+
+    function addDevice(type){
+      if(isDemoMode)return;
+      document.getElementById('hint').style.display='none';
+      const dev={id:nextId++,type,x:canvas.width/2+(Math.random()-0.5)*100,y:canvas.height/2+(Math.random()-0.5)*60};
+      if(type==='pc'){
+        dev.customLabel='PC '+String.fromCharCode(65+pcCount);pcCount++;
+        nicMacs[dev.id]=randomMac();
+      }
+      devices.push(dev);draw();
+    }
+
+    function loadDemo(){
+      devices=[];cables=[];selected=null;activePacket=null;nicMacs={};showBanner(false);
+      document.getElementById('hint').style.display='none';
+      const W=canvas.width,H=canvas.height;
+      const swId=nextId++;
+      devices.push({id:swId,type:'switch',customLabel:'Switch',x:W*0.5,y:H*0.5});
+      const labels=['PC A','PC B','PC C','PC D'];
+      const angles=[-135,-45,135,45].map(a=>a*Math.PI/180);
+      const r=Math.min(W,H)*0.32;
+      angles.forEach((a,i)=>{
+        const id=nextId++;
+        const dev={id,type:'pc',customLabel:labels[i],x:W*0.5+Math.cos(a)*r,y:H*0.5+Math.sin(a)*r};
+        devices.push(dev);
+        nicMacs[id]=randomMac();
+        cables.push({a:swId,b:id});
+      });
+      setInfo('💾','NIC — Network Interface Card','Each PC\'s NIC has a unique MAC address and converts digital data into a signal. Tap any PC to inspect its NIC!');
+      draw();
+    }
+
+    function clearAll(){devices=[];cables=[];selected=null;activePacket=null;nicMacs={};pcCount=0;showBanner(false);draw();}
+    function setInfo(icon,title,sub){document.getElementById('infoIcon').textContent=icon;document.getElementById('infoTitle').textContent=title;document.getElementById('infoSub').textContent=sub;}
+    function goBack(){if(window.AndroidBridge)AndroidBridge.goBack();else history.back();}
+
+    window.addEventListener('resize',resize);
+    window.addEventListener('load',()=>setTimeout(()=>{resize();loadDemo();},200));
+    setTimeout(()=>{resize();loadDemo();},300);
+</script>
+</body>
+</html>
