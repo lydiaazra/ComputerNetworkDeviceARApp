@@ -12,8 +12,10 @@ public class DeviceSelectActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_select);
 
-        // ✅ Each card opens CameraARActivity (CameraX + Three.js)
-        //    NOT DeviceDisplay (ArFragment crashes on Android 16 / Galaxy A56)
+        // ✅ Each card opens DeviceVoiceARActivity — avatar-led, no ArFragment
+        //    (DeviceDisplay/ArFragment crashes on Android 16 / Galaxy A56).
+        //    CameraARActivity (with the text info cards) is still available
+        //    separately for Device Demo's detail view if needed.
         setupCard(R.id.cardRouter,      "Router");
         setupCard(R.id.cardSwitch,      "Switch");
         setupCard(R.id.cardHub,         "Hub");
@@ -30,7 +32,7 @@ public class DeviceSelectActivity extends AppCompatActivity {
         CardView card = findViewById(cardId);
         if (card == null) return;
         card.setOnClickListener(v -> {
-            Intent intent = new Intent(this, CameraARActivity.class);
+            Intent intent = new Intent(this, DeviceVoiceARActivity.class);
             intent.putExtra("deviceName", deviceName);
             startActivity(intent);
         });

@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000">
+
+    <!-- Camera background -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraPreview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:scaleType="fillCenter"/>
+
+    <!-- Horizontal guideline at 44% — device model lives above this, avatar below -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.44"/>
+
+    <!-- 3D Model WebView — confined to the top zone now, not full screen -->
+    <WebView
+        android:id="@+id/modelWebView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/guidelineTop"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Avatar gets its own top boundary, a bit higher than the device zone's
+         bottom edge, so it has more vertical room without touching device sizing -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineAvatarTop"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.36"/>
+
+    <!-- Vertical guideline at 75% — avatar wider now -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guidelineHalf"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.75"/>
+
+    <!-- Avatar WebView — taller and wider now -->
+    <WebView
+        android:id="@+id/avatarWebView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginBottom="20dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/guidelineHalf"
+        app:layout_constraintTop_toTopOf="@id/guidelineAvatarTop"
+        app:layout_constraintBottom_toTopOf="@id/tvHint"/>
+
+    <!-- Top bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="36dp"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="10dp"
+        android:background="#66000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="← Back"
+            android:textAllCaps="false"
+            android:textColor="#FF8FA0"
+            android:textSize="12sp"
+            app:backgroundTint="#00000000"
+            app:cornerRadius="16dp"/>
+
+        <TextView
+            android:id="@+id/tvDeviceTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="Router"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnInfoToggle"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="ℹ️ Info"
+            android:textAllCaps="false"
+            android:textColor="#7EDCFF"
+            android:textSize="12sp"
+            app:backgroundTint="#00000000"
+            app:cornerRadius="16dp"/>
+
+    </LinearLayout>
+
+    <!-- Collapsible text panel — hidden by default, avoids redundancy with the
+         avatar's narration. Its own close button is ALWAYS visible on top of the
+         panel, regardless of the top bar underneath (fixes the "no way to close" bug). -->
+    <ScrollView
+        android:id="@+id/infoPanel"
+        android:visibility="gone"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#EE0A1220"
+        android:padding="18dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="70dp">
+
+            <TextView
+                android:id="@+id/tvInfoTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Router"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="18dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📡 What it does"
+                android:textColor="#7EDCFF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvInfoWhatItDoes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C9E6"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚙️ How it works"
+                android:textColor="#3EC26E"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvInfoHowItWorks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C9E6"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🛡️ Why it matters"
+                android:textColor="#B060FF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp"/>
+
+            <TextView
+                android:id="@+id/tvInfoWhyItMatters"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C9E6"
+                android:textSize="13sp"
+                android:lineSpacingExtra="3dp"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Dedicated close button — declared AFTER infoPanel so it always renders on
+         top of it, independent of whatever the top bar underneath is showing. -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnInfoClose"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="34dp"
+        android:layout_marginEnd="14dp"
+        android:text="✕ Close"
+        android:textAllCaps="false"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        app:backgroundTint="#C73D5A"
+        app:cornerRadius="14dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Hint -->
+    <TextView
+        android:id="@+id/tvHint"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Loading 3D model..."
+        android:textColor="#AA7EDCFF"
+        android:textSize="11sp"
+        android:background="#55000000"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
+        android:layout_marginBottom="18dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Replay button — bottom right -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSpeak"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_marginEnd="14dp"
+        android:layout_marginBottom="30dp"
+        android:text="🔊 Replay"
+        android:textAllCaps="false"
+        android:textSize="13sp"
+        android:textColor="#FFFFFF"
+        app:backgroundTint="#2A9D6F"
+        app:cornerRadius="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

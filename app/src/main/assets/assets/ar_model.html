@@ -27,6 +27,15 @@
     var autoRotate = true;
     var prevX = 0, prevY = 0, pinchDist = null;
 
+    // Per-device scale override — set by Android (evaluateJavascript) just
+    // before calling loadGlbFromBridge(), based on which device is loading.
+    // Multiplies the auto-fit scale (which normalizes max dimension to 2.0
+    // units). Devices with a tall thin shape (e.g. Router's antennas) can end
+    // up filling the frame with no breathing room under that normalization,
+    // so this lets Android dial individual devices down without affecting
+    // any others. Defaults to 1.0 (no change) if never set.
+    window.MODEL_SCALE_MULTIPLIER = 1.0;
+
     function initScene() {
       renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -91,7 +100,7 @@
               var box   = new THREE.Box3().setFromObject(model);
               var ctr   = box.getCenter(new THREE.Vector3());
               var size  = box.getSize(new THREE.Vector3());
-              var sc    = 2.0 / Math.max(size.x, size.y, size.z);
+              var sc    = (2.0 / Math.max(size.x, size.y, size.z)) * window.MODEL_SCALE_MULTIPLIER;
               model.scale.setScalar(sc);
               model.position.sub(ctr.multiplyScalar(sc));
               pivot.add(model);

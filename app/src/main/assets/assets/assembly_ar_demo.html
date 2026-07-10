@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Assembly AR Demo</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;}
+        html,body{width:100%;height:100%;overflow:hidden;background:transparent;}
+        #threeCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+        #uiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;touch-action:none;}
+        #status{
+        position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;
+        background:rgba(8,14,28,0.85);color:#7EDCFF;font:bold 12px system-ui;
+        padding:6px 16px;border-radius:20px;pointer-events:none;white-space:nowrap;
+        border:1px solid #1F6FEB44;
+        }
+        #stepBadgeUI{
+        position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:10;
+        background:rgba(8,14,28,0.75);color:#8FA5C3;font:bold 11px system-ui;
+        padding:5px 14px;border-radius:14px;pointer-events:none;white-space:nowrap;
+        }
+        #deviceBar{
+        position:fixed;left:0;right:0;bottom:108px;z-index:10;
+        background:rgba(13,17,23,0.92);border-top:1px solid #21262D;
+        display:flex;justify-content:space-between;align-items:center;
+        padding:8px 8px;gap:4px;overflow-x:auto;
+        }
+        .devBtn{
+        flex:1 0 auto;min-width:58px;
+        background:#1A1F2B;border:1px solid #30363D;color:#586071;
+        font:bold 9px system-ui;padding:8px 2px;border-radius:8px;
+        text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        }
+        .devBtn.active{background:#1F6FEB33;border-color:#1F6FEB;color:#7EDCFF;}
+        .devBtn.done{background:#3EC26E22;border-color:#3EC26E;color:#3EC26E;}
+        #infobar{
+        position:fixed;bottom:0;left:0;right:0;z-index:10;
+        background:rgba(13,17,23,0.92);border-top:1px solid #21262D;
+        padding:10px 14px 60px;display:flex;align-items:center;gap:10px;
+        }
+        .info-icon{font-size:20px;flex-shrink:0;}
+        .info-text{flex:1;}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px;}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4;}
+        #restartBtn{
+        display:none;background:#3EC26E;border:none;color:#fff;font-size:12px;font-weight:600;
+        padding:8px 16px;border-radius:8px;cursor:pointer;flex-shrink:0;
+        }
+        #btnWatchDemo{
+        background:#1F6FEB;border:none;color:#fff;font-size:12px;font-weight:600;
+        padding:8px 14px;border-radius:8px;cursor:pointer;flex-shrink:0;
+        }
+        #btnSkipDemo{
+        background:#21262D;border:1px solid #30363D;color:#8FA5C3;font-size:11px;font-weight:600;
+        padding:8px 12px;border-radius:8px;cursor:pointer;flex-shrink:0;
+        }
+        #btnCalibrate{
+        background:#21262D;border:1px solid #7EDCFF;color:#7EDCFF;font-size:13px;font-weight:600;
+        padding:6px 10px;border-radius:8px;cursor:pointer;flex-shrink:0;
+        }
+        #btnCalibrate.active{background:#7EDCFF33;}
+    </style>
+</head>
+<body>
+
+<canvas id="threeCanvas"></canvas>
+<canvas id="uiCanvas"></canvas>
+
+<div id="status">Loading...</div>
+<div id="stepBadgeUI">Step 1 / 6</div>
+
+<div id="deviceBar"></div>
+
+<div id="calibratePanel" style="display:none;position:fixed;top:80px;left:12px;right:12px;z-index:11;background:rgba(8,14,28,0.95);border:1px solid #7EDCFF;border-radius:10px;padding:10px 12px;">
+    <div style="color:#7EDCFF;font:bold 11px system-ui;margin-bottom:4px;">🎯 Calibrate mode — tap the port on the model</div>
+    <div id="calibrateOutput" style="color:#3EC26E;font:11px monospace;word-break:break-all;">Tap the port to see its coordinates here.</div>
+</div>
+
+<div id="infobar">
+    <span class="info-icon" id="infoIcon">🔌</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">Network Assembly</div>
+        <div class="info-sub" id="infoSub">Loading...</div>
+    </div>
+    <button id="btnSkipDemo" onclick="onSkipDemoClicked()" style="display:none;">Skip →</button>
+    <button id="btnWatchDemo" onclick="onWatchDemoClicked()" style="display:none;">▶ Demo</button>
+    <button id="btnCalibrate" onclick="onCalibrateToggle()">🎯</button>
+    <button id="restartBtn" onclick="onRestartClicked()">Restart ⟳</button>
+</div>
+
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+<script>
+    const ICONS = { router:'🔌', firewall:'🛡️', switch:'🔀', pc:'💻', wap:'📶', repeater:'🔁', gateway:'🌐', hub:'📡' };
+
+    // Each step: id = unique instance key, type = device category (for icon
+    // lookup), glb = model file, label = display name (must be unique within
+    // its own topology, since "badge" references the target device by label).
+    const TOPOLOGIES = {
+
+    home: [
+    { id:'router', type:'router', glb:'router.glb', label:'Router', color:0x1F6FEB,
+      avatarLine:'This is the Router. It connects your home network to the Internet. Drag it into position, then tap it to confirm.',
+      demoLine:'In a home network, the Router sits at the centre, connecting your devices to the Internet.',
+      port:null, badge:null, demoPos:new THREE.Vector3(0, 0.9, 0) },
+    { id:'wap', type:'wap', glb:'wap.glb', label:'WAP', color:0x0F9E70,
+      avatarLine:'This is the Wireless Access Point, for WiFi. Drag it into position, then tap its port, then tap the Router to connect them.',
+      demoLine:'The Wireless Access Point connects to the Router, providing WiFi coverage for wireless devices.',
+      port:'UP', badge:'Router', demoPos:new THREE.Vector3(-0.6, 0, 0) },
+    { id:'pc1', type:'pc', glb:'pc.glb', label:'PC', color:0x4A6AE0,
+      avatarLine:'This is a computer with a NIC. Drag it into position, then tap its NIC port, then tap the Router to connect them.',
+      demoLine:'This computer connects directly to the Router using a wired connection.',
+      port:'NIC', badge:'Router', demoPos:new THREE.Vector3(0.6, 0, 0) },
+    { id:'repeater', type:'repeater', glb:'repeater.glb', label:'Repeater', color:0x388BFD,
+      avatarLine:'This is the Repeater, to extend WiFi range. Drag it into position, then tap its IN port, then tap the WAP to connect them.',
+      demoLine:'The Repeater connects to the WAP, extending WiFi coverage to areas further away.',
+      port:'IN', badge:'WAP', demoPos:new THREE.Vector3(-0.6, -0.9, 0) },
+    ],
+
+    office: [
+    { id:'firewall', type:'firewall', glb:'firewall.glb', label:'Firewall', color:0xC03030,
+      avatarLine:'This is the Firewall, the first line of defence from the Internet. Drag it into position, then tap it to confirm.',
+      demoLine:'In an office network, the Firewall sits at the edge, protecting the network before traffic reaches the Router.',
+      port:null, badge:null, demoPos:new THREE.Vector3(0, 1.1, 0) },
+    { id:'router', type:'router', glb:'router.glb', label:'Router', color:0x1F6FEB,
+      avatarLine:'This is the Router. Drag it into position, then tap its WAN port, then tap the Firewall to connect them.',
+      demoLine:'The Router connects to the Firewall, and routes traffic onward to the internal switches.',
+      port:'WAN', badge:'Firewall', demoPos:new THREE.Vector3(0, 0.5, 0) },
+    { id:'switch1', type:'switch', glb:'switch.glb', label:'Switch A', color:0x2A6B20,
+      avatarLine:'This is the first Switch. Drag it into position, then tap its UP port, then tap the Router to connect them.',
+      demoLine:'Switch A connects to the Router, distributing the network to one group of wired devices.',
+      port:'UP', badge:'Router', demoPos:new THREE.Vector3(-0.7, -0.1, 0) },
+    { id:'switch2', type:'switch', glb:'switch.glb', label:'Switch B', color:0x2A6B20,
+      avatarLine:'This is the second Switch. Drag it into position, then tap its UP port, then tap the Router to connect them.',
+      demoLine:'Switch B connects to the Router, serving a separate group of devices, including the wireless access point.',
+      port:'UP', badge:'Router', demoPos:new THREE.Vector3(0.7, -0.1, 0) },
+    { id:'pc1', type:'pc', glb:'pc.glb', label:'PC 1', color:0x4A6AE0,
+      avatarLine:'This is the first computer. Drag it into position, then tap its NIC port, then tap Switch A to connect them.',
+      demoLine:'This computer connects to Switch A, part of the first group of wired devices.',
+      port:'NIC', badge:'Switch A', demoPos:new THREE.Vector3(-0.7, -0.9, 0) },
+    { id:'pc2', type:'pc', glb:'pc.glb', label:'PC 2', color:0x4A6AE0,
+      avatarLine:'This is the second computer. Drag it into position, then tap its NIC port, then tap Switch B to connect them.',
+      demoLine:'This computer connects to Switch B, part of the second group of wired devices.',
+      port:'NIC', badge:'Switch B', demoPos:new THREE.Vector3(0.3, -0.9, 0) },
+    { id:'wap', type:'wap', glb:'wap.glb', label:'WAP', color:0x0F9E70,
+      avatarLine:'This is the Wireless Access Point. Drag it into position, then tap its port, then tap Switch B to connect them.',
+      demoLine:'The Wireless Access Point connects to Switch B, providing WiFi coverage for this area of the office.',
+      port:'UP', badge:'Switch B', demoPos:new THREE.Vector3(1.0, -0.9, 0) },
+    ],
+
+    server_room: [
+    { id:'gateway', type:'gateway', glb:'gateway.glb', label:'Gateway', color:0xB060FF,
+      avatarLine:'This is the Gateway, managing traffic entering and leaving the server room. Drag it into position, then tap it to confirm.',
+      demoLine:'In a server room, the Gateway sits at the entry point, managing traffic between networks.',
+      port:null, badge:null, demoPos:new THREE.Vector3(0, 1.1, 0) },
+    { id:'firewall', type:'firewall', glb:'firewall.glb', label:'Firewall', color:0xC03030,
+      avatarLine:'This is the Firewall, protecting the server room from external threats. Drag it into position, then tap its WAN port, then tap the Gateway to connect them.',
+      demoLine:'The Firewall connects to the Gateway, protecting the internal server room network.',
+      port:'WAN', badge:'Gateway', demoPos:new THREE.Vector3(0, 0.5, 0) },
+    { id:'switch', type:'switch', glb:'switch.glb', label:'Core Switch', color:0x2A6B20,
+      avatarLine:'This is the Core Switch, distributing the network across the server room. Drag it into position, then tap its UP port, then tap the Firewall to connect them.',
+      demoLine:'The Core Switch connects to the Firewall, distributing the network throughout the server room.',
+      port:'UP', badge:'Firewall', demoPos:new THREE.Vector3(0, -0.1, 0) },
+    { id:'hub', type:'hub', glb:'hub.glb', label:'Hub', color:0xC07020,
+      avatarLine:'This is a legacy Hub — unlike a Switch, it broadcasts data to every port. Drag it into position, then tap its port, then tap the Core Switch to connect them.',
+      demoLine:'The Hub connects to the Core Switch, and broadcasts data to every device connected to it.',
+      port:'UP', badge:'Core Switch', demoPos:new THREE.Vector3(-0.8, -0.8, 0) },
+    { id:'pc1', type:'pc', glb:'pc.glb', label:'Terminal 1', color:0x4A6AE0,
+      avatarLine:'This is a terminal connected through the Hub. Drag it into position, then tap its NIC port, then tap the Hub to connect them.',
+      demoLine:'This terminal connects through the Hub, sharing the same broadcast domain as other Hub-connected devices.',
+      port:'NIC', badge:'Hub', demoPos:new THREE.Vector3(-0.8, -1.5, 0) },
+    { id:'pc2', type:'pc', glb:'pc.glb', label:'Terminal 2', color:0x4A6AE0,
+      avatarLine:'This is a terminal connected directly to the Core Switch. Drag it into position, then tap its NIC port, then tap the Core Switch to connect them.',
+      demoLine:'This terminal connects directly to the Core Switch, for a dedicated, filtered connection.',
+      port:'NIC', badge:'Core Switch', demoPos:new THREE.Vector3(0.8, -0.8, 0) },
+    ],
+
+    test_home_switch: [
+    { id:'router', type:'router', glb:'router.glb', label:'Router', color:0x1F6FEB,
+      avatarLine:'This is the Router. It connects your network to the Internet. Drag it into position, then tap it to confirm.',
+      demoLine:'The Router connects your home network to the Internet.',
+      port:null, badge:null, demoPos:new THREE.Vector3(0, 1.0, 0) },
+    { id:'switch', type:'switch', glb:'switch.glb', label:'Switch', color:0x2A6B20,
+      avatarLine:'This is the Switch. It distributes the connection to multiple wired devices. Drag it into position, then tap its UP port, then tap the Router to connect them.',
+      demoLine:'The Switch connects to the Router, distributing the connection to multiple wired devices.',
+      port:'UP', badge:'Router', demoPos:new THREE.Vector3(0, 0.3, 0), cableColor:0x1F6FEB },
+    { id:'pc1', type:'pc', glb:'pc.glb', label:'PC', color:0x4A6AE0,
+      avatarLine:'This is the PC. Drag it into position, then tap its NIC port, then tap the Switch to connect them.',
+      demoLine:'The PC connects to the Switch using a wired connection.',
+      port:'NIC', badge:'Switch', demoPos:new THREE.Vector3(-1.0, -0.6, 0), cableColor:0xE8871E },
+    { id:'pc2', type:'pc', glb:'pc.glb', label:'Laptop', color:0x4A6AE0,
+      avatarLine:'This is the Laptop. Drag it into position, then tap its NIC port, then tap the Switch to connect them.',
+      demoLine:'The Laptop connects to the Switch using a wired connection.',
+      port:'NIC', badge:'Switch', demoPos:new THREE.Vector3(-0.35, -0.9, 0), cableColor:0x2EC4D6 },
+    { id:'pc3', type:'pc', glb:'pc.glb', label:'Console', color:0x4A6AE0,
+      avatarLine:'This is the Console. Drag it into position, then tap its NIC port, then tap the Switch to connect them.',
+      demoLine:'The Console connects to the Switch using a wired connection.',
+      port:'NIC', badge:'Switch', demoPos:new THREE.Vector3(0.35, -0.9, 0), cableColor:0x4CAF50 },
+    { id:'pc4', type:'pc', glb:'pc.glb', label:'TV', color:0x4A6AE0,
+      avatarLine:'This is the TV. Drag it into position, then tap its NIC port, then tap the Switch to connect them.',
+      demoLine:'The TV connects to the Switch using a wired connection.',
+      port:'NIC', badge:'Switch', demoPos:new THREE.Vector3(1.0, -0.6, 0), cableColor:0xE24B4A },
+    ],
+
+    };
+
+    let STEPS = TOPOLOGIES.home;
+    let currentIndex = 0;
+    let stepsDone = [];
+    let modelShownForCurrent = false;
+    let connected = false;
+    let placedModels = {};
+    let connectionLines = [];
+    let isDemoMode = false;
+    let calibrateMode = false;
+
+    // The exact tapped point on the CURRENT device, stored in that device's
+    // OWN local space so it stays correct even if the device is dragged or
+    // rotated again after picking the source port and before tapping the target.
+    let connectFromLocal = null;
+    let connectFromDeviceId = null;
+
+    const threeCanvas = document.getElementById('threeCanvas');
+    const renderer = new THREE.WebGLRenderer({canvas:threeCanvas,antialias:true,alpha:true});
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth, innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(55, innerWidth/innerHeight, 0.01, 100);
+    camera.position.set(0, 0, 6.0);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.0);
+    key.position.set(2,4,3); scene.add(key);
+    const fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
+    fill.position.set(-3,0,-2); scene.add(fill);
+
+    // pivot = whole diorama, currently fixed (QR anchor disabled — see below).
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+
+    // Built once the topology is confirmed (see initTopology).
+    const deviceGroups = {};
+    function buildDeviceGroups(){
+    STEPS.forEach(step=>{
+    if (deviceGroups[step.id]) return;
+    const g = new THREE.Group();
+    pivot.add(g);
+    deviceGroups[step.id] = g;
+    });
+    }
+
+    let autoRotate = true, rotY = 0;
+
+    // Two-finger gesture state — pinch scales, twist rotates, simultaneously.
+    let pinchStartDist = null, pinchStartScale = 1;
+    let pinchStartAngle = null, pinchStartRotY = 0;
+    let userScale = 1;
+
+    // One-finger gesture state — drag moves the CURRENT device only.
+    let isDraggingDevice = false;
+    let touchStartX = 0, touchStartY = 0, touchMoved = false;
+
+    function hasAnyModel(){ return Object.keys(placedModels).length > 0; }
+    function idForLabel(label){ const s = STEPS.find(x=>x.label===label); return s ? s.id : null; }
+
+    function speak(text){
+    if (window.AndroidBridge) AndroidBridge.speakAvatarLine(text);
+    }
+
+    // ─── TOPOLOGY SELECTION — Java confirms which one after page load ───────────
+    let threeReady = false;
+    let pendingTopologyId = null;
+
+    window.initTopology = function(id){
+    STEPS = TOPOLOGIES[id] || TOPOLOGIES.home;
+    stepsDone = STEPS.map(()=>false);
+    currentIndex = 0;
+    if (threeReady) startFlow();
+    else pendingTopologyId = id;
+    };
+
+    function startFlow(){
+    buildDeviceGroups();
+    buildDeviceBar();
+    document.getElementById('deviceBar').style.display = 'none';
+    document.getElementById('btnWatchDemo').style.display = 'inline-block';
+    document.getElementById('btnSkipDemo').style.display = 'inline-block';
+    const line = 'Welcome! Would you like to watch a quick demo of how this network is built, or try it yourself right away?';
+    setInfo('🎬','Watch a demo first?', line);
+    speak(line);
+    }
+
+    window.onWatchDemoClicked = function(){
+    document.getElementById('btnWatchDemo').style.display = 'none';
+    document.getElementById('btnSkipDemo').style.display = 'none';
+    runDemoSequence();
+    };
+
+    window.onSkipDemoClicked = function(){
+    document.getElementById('btnWatchDemo').style.display = 'none';
+    document.getElementById('btnSkipDemo').style.display = 'none';
+    document.getElementById('deviceBar').style.display = 'flex';
+    const first = STEPS[0];
+    setInfo(ICONS[first.type]||'🔌','Get started','Tap '+first.label+' to place it.');
+    speak('Let\'s build your network. Tap '+first.label+' to place it.');
+    };
+
+    // ─── DEMO MODE — auto-plays the same STEPS sequence, no user input ──────────
+    function runDemoSequence(){
+    isDemoMode = true;
+    currentIndex = 0;
+    stepsDone = STEPS.map(()=>false);
+    connectFromLocal = null; connectFromDeviceId = null;
+    clearAllModels();
+    if (window.AndroidBridge) AndroidBridge.setAvatarVisible(false);
+    demoStepLoop();
+    }
+
+    function demoStepLoop(){
+    if (currentIndex >= STEPS.length) return;
+    requestStepModel(currentIndex);
+    }
+
+    function autoCompleteDemoStep(){
+    const step = STEPS[currentIndex];
+    const g = deviceGroups[step.id];
+    g.position.copy(step.demoPos);
+    g.rotation.set(0, THREE.MathUtils.degToRad(25), 0);
+
+    if (step.port === null){
+    connected = true;
+    advanceIfDone();
+    if (isDemoMode) setTimeout(demoStepLoop, 900);
+    return;
+    }
+
+    const box = new THREE.Box3().setFromObject(placedModels[step.id]);
+    connectFromLocal = g.worldToLocal(box.getCenter(new THREE.Vector3()));
+    connectFromDeviceId = step.id;
+
+    setTimeout(()=>{
+    const targetId = idForLabel(step.badge);
+    const targetGroup = deviceGroups[targetId];
+    const targetBox = new THREE.Box3().setFromObject(placedModels[targetId]);
+    const targetWorld = targetBox.getCenter(new THREE.Vector3());
+    const sourceWorldNow = deviceGroups[connectFromDeviceId].localToWorld(connectFromLocal.clone());
+    const sourcePivotLocal = pivot.worldToLocal(sourceWorldNow.clone());
+    const targetPivotLocal = pivot.worldToLocal(targetWorld.clone());
+    addConnectionLine3D(sourcePivotLocal, targetPivotLocal, step.cableColor || 0x3EC26E);
+    connected = true;
+    connectFromLocal = null; connectFromDeviceId = null;
+    const line = step.label+' connects to '+step.badge+'.';
+    setInfo('✅','Connected!', line);
+    advanceIfDone();
+    if (isDemoMode) setTimeout(demoStepLoop, 900);
+    }, 1600);
+    }
+
+    // ─── QR ANCHOR ────────────────────────────────────────────────────────────────
+    // Currently disabled — pivot stays fixed and always visible. Flip
+    // QR_TRACKING_ENABLED to true (and re-enable the native side) to bring
+    // marker-anchored placement back later.
+    const QR_TRACKING_ENABLED = false;
+    let qrVisible = true, qrNx = 0.5, qrNy = 0.5, qrSizeNorm = 0.12;
+    const QR_REF_SIZE = 0.12;
+    pivot.visible = true;
+    pivot.position.set(0, 0, 0);
+    pivot.scale.setScalar(1);
+    let lastQrUpdateMs = 0;
+
+    window.onQrUpdate = function(detected, nx, ny, sizeNorm){
+    if (!QR_TRACKING_ENABLED) return;
+    qrVisible = detected;
+    if (detected){ qrNx = nx; qrNy = ny; qrSizeNorm = sizeNorm; }
+    lastQrUpdateMs = Date.now();
+    };
+
+    const _unprojVec = new THREE.Vector3();
+    function screenToWorldAtZ0(nx, ny){
+    const ndcX = nx*2 - 1;
+    const ndcY = -(ny*2 - 1);
+    _unprojVec.set(ndcX, ndcY, 0.5).unproject(camera);
+    const dir = _unprojVec.sub(camera.position).normalize();
+    const t = -camera.position.z / dir.z;
+    return camera.position.clone().add(dir.multiplyScalar(t));
+    }
+
+    function updateQrAnchor(){
+    if (!QR_TRACKING_ENABLED) return;
+    pivot.visible = qrVisible;
+    if (!qrVisible) return;
+    const worldPos = screenToWorldAtZ0(qrNx, qrNy);
+    pivot.position.set(worldPos.x, worldPos.y, 0);
+    pivot.scale.setScalar(THREE.MathUtils.clamp(qrSizeNorm/QR_REF_SIZE, 0.35, 2.5));
+    }
+
+    window.onCalibrateToggle = function(){
+    calibrateMode = !calibrateMode;
+    document.getElementById('btnCalibrate').classList.toggle('active', calibrateMode);
+    document.getElementById('calibratePanel').style.display = calibrateMode ? 'block' : 'none';
+    document.getElementById('calibrateOutput').textContent = 'Tap the port to see its coordinates here.';
+    };
+
+    // ─── DEVICE BUTTON BAR ────────────────────────────────────────────────────────
+    function buildDeviceBar(){
+    const bar = document.getElementById('deviceBar');
+    bar.innerHTML = '';
+    STEPS.forEach((step,i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'devBtn';
+    btn.id = 'devbtn-'+step.id;
+    btn.textContent = (ICONS[step.type]||'')+' '+step.label;
+    btn.onclick = function(){ onDeviceButtonTap(i); };
+    bar.appendChild(btn);
+    });
+    updateDeviceBarStates();
+    }
+
+    function updateDeviceBarStates(){
+    STEPS.forEach((step,i)=>{
+    const btn = document.getElementById('devbtn-'+step.id);
+    if (!btn) return;
+    btn.classList.remove('active','done');
+    if (stepsDone[i]) btn.classList.add('done');
+    else if (i === currentIndex) btn.classList.add('active');
+    });
+    document.getElementById('stepBadgeUI').textContent = 'Step '+(currentIndex+1)+' / '+STEPS.length;
+    }
+
+    function onDeviceButtonTap(i){
+    if (isDemoMode) return;
+    if (i !== currentIndex){
+    if (i > currentIndex) speak('Finish the current device first.');
+    return;
+    }
+    if (!modelShownForCurrent){
+    modelShownForCurrent = true;
+    requestStepModel(currentIndex);
+    }
+    }
+
+    // ─── MODEL LOADING — one request at a time ───────────────────────────────────
+    function requestStepModel(i){
+    const step = STEPS[i];
+    connected = false;
+    connectFromLocal = null;
+    connectFromDeviceId = null;
+    userScale = 1; rotY = 0; autoRotate = true;
+    if (isDemoMode){
+    deviceGroups[step.id].position.copy(step.demoPos);
+    deviceGroups[step.id].rotation.set(0, THREE.MathUtils.degToRad(25), 0);
+    } else {
+    deviceGroups[step.id].position.set(0, 0.2, 0.35);
+    deviceGroups[step.id].rotation.set(0,0,0);
+    }
+    setStatus('Loading '+step.label+'...');
+    setInfo(ICONS[step.type]||'🔌', step.label, isDemoMode ? step.demoLine : step.avatarLine);
+    if (window.AndroidBridge) AndroidBridge.requestGlb(step.glb);
+    else { buildPlaceholder(step); onModelLoaded(); }
+    }
+
+    window.onGlbReady = function(){
+    const total = AndroidBridge.getGlbLength();
+    const step = STEPS[currentIndex];
+    if (total === 0) { buildPlaceholder(step); onModelLoaded(); return; }
+    const chunks = []; let offset = 0;
+    function fetchNext(){
+    if (offset >= total) {
+    const b64 = chunks.join('');
+    const binary = atob(b64);
+    const buf = new ArrayBuffer(binary.length);
+    const view = new Uint8Array(buf);
+    for (let i=0;i<binary.length;i++) view[i]=binary.charCodeAt(i);
+    new THREE.GLTFLoader().parse(buf,'',function(gltf){
+    setModel(gltf.scene); onModelLoaded();
+    }, function(){ buildPlaceholder(step); onModelLoaded(); });
+    return;
+    }
+    const chunk = AndroidBridge.getGlbChunk(offset);
+    if (!chunk || chunk.length===0) { buildPlaceholder(step); onModelLoaded(); return; }
+    chunks.push(chunk); offset += chunk.length;
+    setStatus('Loading... '+Math.round(offset/total*100)+'%');
+    setTimeout(fetchNext,0);
+    }
+    fetchNext();
+    };
+
+    function setModel(model){
+    const step = STEPS[currentIndex];
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const ctr = box.getCenter(new THREE.Vector3());
+    const sc = 0.8 / Math.max(size.x, size.y, size.z);
+    model.scale.setScalar(sc);
+    model.position.sub(ctr.multiplyScalar(sc));
+    deviceGroups[step.id].add(model);
+    placedModels[step.id] = model;
+    }
+
+    function buildPlaceholder(step){
+    const geo = new THREE.BoxGeometry(0.7, 0.4, 0.45);
+    const mat = new THREE.MeshStandardMaterial({color: step.color});
+    const mesh = new THREE.Mesh(geo, mat);
+    deviceGroups[step.id].add(mesh);
+    placedModels[step.id] = mesh;
+    }
+
+    function addConnectionLine3D(pointA, pointB, color){
+    const mid = pointA.clone().add(pointB).multiplyScalar(0.5);
+    mid.y -= 0.06; // slight sag, like a real hanging cable
+    const curve = new THREE.QuadraticBezierCurve3(pointA, mid, pointB);
+    const geo = new THREE.TubeGeometry(curve, 16, 0.013, 8, false);
+    const mat = new THREE.MeshStandardMaterial({color: color, roughness:0.55, metalness:0.15});
+    const tube = new THREE.Mesh(geo, mat);
+    pivot.add(tube);
+    connectionLines.push(tube);
+    }
+
+    function clearAllModels(){
+    Object.keys(deviceGroups).forEach(id=>{
+    const g = deviceGroups[id];
+    while (g.children.length){
+    const child = g.children[0];
+    g.remove(child);
+    child.traverse(obj=>{
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material){
+    if (Array.isArray(obj.material)) obj.material.forEach(m=>m.dispose());
+    else obj.material.dispose();
+    }
+    });
+    }
+    g.position.set(0,0,0);
+    g.rotation.set(0,0,0);
+    g.scale.setScalar(1);
+    });
+    connectionLines.forEach(line=>{ pivot.remove(line); line.geometry.dispose(); line.material.dispose(); });
+    connectionLines = [];
+    placedModels = {};
+    }
+
+    function onModelLoaded(){
+    setStatus('');
+    const step = STEPS[currentIndex];
+    if (window.AndroidBridge) AndroidBridge.log('step_model_loaded:'+step.id);
+    speak(isDemoMode ? step.demoLine : step.avatarLine);
+    if (isDemoMode) setTimeout(autoCompleteDemoStep, 2600);
+    }
+
+    function advanceIfDone(){
+    stepsDone[currentIndex] = true;
+    if (currentIndex === STEPS.length-1){
+    completeAssembly();
+    return;
+    }
+    currentIndex++;
+    modelShownForCurrent = false;
+    connected = false;
+    updateDeviceBarStates();
+    }
+
+    // ─── RAYCASTING — tap the actual port on the actual model ────────────────────
+    const uiCanvas = document.getElementById('uiCanvas');
+    const ctx = uiCanvas.getContext('2d');
+    uiCanvas.width = innerWidth; uiCanvas.height = innerHeight;
+
+    const raycaster = new THREE.Raycaster();
+    function raycastHit(xPix, yPix){
+    const mouse = new THREE.Vector2((xPix/uiCanvas.width)*2-1, -(yPix/uiCanvas.height)*2+1);
+    raycaster.setFromCamera(mouse, camera);
+    const meshes = Object.values(placedModels);
+    const hits = raycaster.intersectObjects(meshes, true);
+    return hits.length ? hits[0] : null;
+    }
+    function deviceIdForObject(obj){
+    let o = obj;
+    while (o){
+    for (const id in placedModels){ if (placedModels[id] === o) return id; }
+    o = o.parent;
+    }
+    return null;
+    }
+
+    function screenToPivotLocal(xPix, yPix){
+    const world = screenToWorldAtZ0(xPix/uiCanvas.width, yPix/uiCanvas.height);
+    return pivot.worldToLocal(world.clone());
+    }
+
+    function handleTap(x, y){
+    const hit = raycastHit(x, y);
+    if (!hit) return;
+    const hitId = deviceIdForObject(hit.object);
+    const step = STEPS[currentIndex];
+
+    if (calibrateMode){
+    if (hitId !== step.id) return;
+    const local = deviceGroups[step.id].worldToLocal(hit.point.clone());
+    const txt = 'portPos: new THREE.Vector3(' + local.x.toFixed(3) + ', ' + local.y.toFixed(3) + ', ' + local.z.toFixed(3) + '),';
+    document.getElementById('calibrateOutput').textContent = txt;
+    if (window.AndroidBridge) AndroidBridge.log('CALIBRATE ' + step.id + ': ' + txt);
+    return;
+    }
+
+    if (hitId === step.id){
+    if (step.port === null){
+    connected = true;
+    const next = STEPS[currentIndex+1];
+    const line = 'Placed! ' + (next ? 'Now tap '+next.label+' to add the next device.' : '');
+    setInfo('✅','Placed!', line);
+    speak(line);
+    advanceIfDone();
+    } else {
+    connectFromLocal = deviceGroups[step.id].worldToLocal(hit.point.clone());
+    connectFromDeviceId = step.id;
+    const line = 'Got it. Now tap the '+step.badge+' to connect them.';
+    setInfo('🔌','Port selected', line);
+    speak(line);
+    }
+    return;
+    }
+
+    const hitIdx = STEPS.findIndex(s=>s.id===hitId);
+    if (hitIdx >= 0 && stepsDone[hitIdx]){
+    if (!connectFromLocal){ return; }
+    if (hitId === idForLabel(step.badge)){
+    const sourceWorldNow = deviceGroups[connectFromDeviceId].localToWorld(connectFromLocal.clone());
+    const sourcePivotLocal = pivot.worldToLocal(sourceWorldNow.clone());
+    const targetPivotLocal = pivot.worldToLocal(hit.point.clone());
+    addConnectionLine3D(sourcePivotLocal, targetPivotLocal, step.cableColor || 0x3EC26E);
+    connected = true;
+    connectFromLocal = null;
+    connectFromDeviceId = null;
+    const next = STEPS[currentIndex+1];
+    const line = step.label+' is now linked to '+step.badge+'.'
+    + (next ? ' Now tap '+next.label+' to add the next device.' : ' That was the last connection!');
+    setInfo('✅','Connected!', line);
+    speak(line);
+    advanceIfDone();
+    } else {
+    speak('That is not the right device. Tap the '+step.badge+' instead.');
+    }
+    }
+    }
+
+    // ─── INPUT ────────────────────────────────────────────────────────────────────
+    function cp(e){
+    const r = uiCanvas.getBoundingClientRect();
+    const s = e.touches?e.touches[0]:e.changedTouches?e.changedTouches[0]:e;
+    return { x:(s.clientX-r.left)*(uiCanvas.width/r.width), y:(s.clientY-r.top)*(uiCanvas.height/r.height) };
+    }
+    function touchDist(t1,t2){ return Math.hypot(t1.clientX-t2.clientX, t1.clientY-t2.clientY); }
+    function touchAngle(t1,t2){ return Math.atan2(t2.clientY-t1.clientY, t2.clientX-t1.clientX); }
+
+    uiCanvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if (isDemoMode || !hasAnyModel() || !modelShownForCurrent) return;
+    if (e.touches.length >= 2){
+    isDraggingDevice = false;
+    autoRotate = false;
+    pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+    pinchStartScale = userScale;
+    pinchStartAngle = touchAngle(e.touches[0], e.touches[1]);
+    pinchStartRotY = rotY;
+    return;
+    }
+    const {x,y} = cp(e);
+    touchStartX = x; touchStartY = y; touchMoved = false;
+    autoRotate = false;
+    const hit = raycastHit(x,y);
+    const curId = STEPS[currentIndex].id;
+    isDraggingDevice = !!(hit && deviceIdForObject(hit.object) === curId);
+    }, {passive:false});
+
+    uiCanvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if (!hasAnyModel() || !modelShownForCurrent) return;
+    if (e.touches.length >= 2 && pinchStartDist != null){
+    const dist = touchDist(e.touches[0], e.touches[1]);
+    userScale = Math.min(3, Math.max(0.4, pinchStartScale*(dist/pinchStartDist)));
+    const angle = touchAngle(e.touches[0], e.touches[1]);
+    rotY = pinchStartRotY + THREE.MathUtils.radToDeg(angle - pinchStartAngle);
+    return;
+    }
+    if (isDraggingDevice){
+    const {x,y} = cp(e);
+    if (Math.hypot(x-touchStartX,y-touchStartY) > 8) touchMoved = true;
+    const local = screenToPivotLocal(x,y);
+    const curId = STEPS[currentIndex].id;
+    deviceGroups[curId].position.set(local.x, local.y, 0);
+    }
+    }, {passive:false});
+
+    uiCanvas.addEventListener('touchend', e=>{
+    e.preventDefault();
+    if (e.touches.length < 2){ pinchStartDist = null; }
+    if (isDraggingDevice && !touchMoved){
+    const {x,y} = cp(e);
+    handleTap(x,y);
+    }
+    isDraggingDevice = false;
+    }, {passive:false});
+
+    // ─── DRAW ─────────────────────────────────────────────────────────────────────
+    function projectPivotLocal(localVec){
+    const world = localVec.clone();
+    pivot.localToWorld(world);
+    world.project(camera);
+    return { x:(world.x+1)/2*uiCanvas.width, y:(-world.y+1)/2*uiCanvas.height };
+    }
+
+    function drawUI(){
+    ctx.clearRect(0,0,uiCanvas.width,uiCanvas.height);
+
+    if (!modelShownForCurrent) return;
+
+    const step = STEPS[currentIndex];
+    if (!isDemoMode && !calibrateMode && !connected && step.port && step.portPos){
+    drawPortPointer(step);
+    }
+
+    if (connectFromLocal && connectFromDeviceId){
+    const worldNow = deviceGroups[connectFromDeviceId].localToWorld(connectFromLocal.clone());
+    const localInPivot = pivot.worldToLocal(worldNow.clone());
+    const pos = projectPivotLocal(localInPivot);
+    ctx.save();
+    ctx.fillStyle = '#7EDCFF';
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    ctx.restore();
+    }
+    }
+
+    // Pre-points at a calibrated port location — numbered badge, dashed
+    // leader arrow, and a yellow instruction note, matching a tutorial-style
+    // callout. Only draws once step.portPos has been calibrated and hardcoded.
+    function drawPortPointer(step){
+    const worldPos = deviceGroups[step.id].localToWorld(step.portPos.clone());
+    const pivotLocal = pivot.worldToLocal(worldPos.clone());
+    const pos = projectPivotLocal(pivotLocal);
+
+    const boxW = 150, boxH = 46;
+    const boxX = Math.min(Math.max(pos.x - boxW/2, 8), uiCanvas.width-boxW-8);
+    const boxY = Math.max(pos.y - boxH - 46, 8);
+
+    ctx.save();
+    // dashed leader from box to port point
+    ctx.strokeStyle = '#F0D020'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(boxX+boxW/2, boxY+boxH); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // ring around the exact port point
+    ctx.strokeStyle = '#F0D020'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, 14, 0, Math.PI*2); ctx.stroke();
+
+    // numbered badge (step order within its own device — always "1" since
+    // one port per step currently, kept as a field for future multi-port devices)
+    ctx.fillStyle = '#123A6B';
+    ctx.beginPath(); ctx.arc(boxX-2, boxY-2, 12, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font='bold 11px system-ui';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('1', boxX-2, boxY-1);
+
+    // yellow instruction note
+    ctx.fillStyle = '#F5E6A8';
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(boxX,boxY,boxW,boxH,6) : ctx.rect(boxX,boxY,boxW,boxH);
+    ctx.fill();
+    ctx.strokeStyle = '#C9A227'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#4A3A00'; ctx.font='bold 10px system-ui';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    wrapText('Tap the '+(step.portName||step.port)+' port here', boxX+8, boxY+7, boxW-16, 12);
+    ctx.restore();
+    }
+
+    function wrapText(text, x, y, maxWidth, lineHeight){
+    const words = text.split(' ');
+    let line = '', yy = y;
+    for (let i=0;i<words.length;i++){
+    const test = line + words[i] + ' ';
+    if (ctx.measureText(test).width > maxWidth && line){
+    ctx.fillText(line, x, yy); line = words[i] + ' '; yy += lineHeight;
+    } else { line = test; }
+    }
+    ctx.fillText(line, x, yy);
+    }
+
+    function completeAssembly(){
+    if (isDemoMode){
+    isDemoMode = false;
+    if (window.AndroidBridge) AndroidBridge.setAvatarVisible(true);
+    clearAllModels();
+    currentIndex = 0;
+    stepsDone = STEPS.map(()=>false);
+    connectFromLocal = null; connectFromDeviceId = null;
+    updateDeviceBarStates();
+    document.getElementById('deviceBar').style.display = 'flex';
+    const first = STEPS[0];
+    const line = 'That\'s how it works! Now it\'s your turn — tap '+first.label+' to build it yourself.';
+    setInfo('🎬','Demo complete!', line);
+    speak(line);
+    return;
+    }
+    const line = 'Great job — every device is connected. Your network is complete.';
+    setInfo('🎉','Network assembled!', line);
+    speak(line);
+    document.getElementById('restartBtn').style.display = 'inline-block';
+    if (window.AndroidBridge) AndroidBridge.onAssemblyComplete();
+    }
+
+    window.onRestartClicked = function(){
+    currentIndex = 0;
+    stepsDone = STEPS.map(()=>false);
+    modelShownForCurrent = false;
+    connected = false;
+    connectFromLocal = null; connectFromDeviceId = null;
+    isDemoMode = false;
+    if (window.AndroidBridge) AndroidBridge.setAvatarVisible(true);
+    document.getElementById('restartBtn').style.display = 'none';
+    document.getElementById('deviceBar').style.display = 'none';
+    userScale = 1; rotY = 0; autoRotate = true;
+    clearAllModels();
+    updateDeviceBarStates();
+    document.getElementById('btnWatchDemo').style.display = 'inline-block';
+    document.getElementById('btnSkipDemo').style.display = 'inline-block';
+    const line = 'Would you like to watch the demo again, or try it yourself?';
+    setInfo('🎬','Watch a demo first?', line);
+    speak(line);
+    };
+
+    function animate(){
+    requestAnimationFrame(animate);
+    updateQrAnchor();
+    if (!isDemoMode && STEPS.length && deviceGroups[STEPS[currentIndex].id]){
+    const curId = STEPS[currentIndex].id;
+    const curGroup = deviceGroups[curId];
+    if (autoRotate) rotY += 0.3;
+    curGroup.rotation.y = THREE.MathUtils.degToRad(rotY);
+    curGroup.scale.setScalar(userScale);
+    }
+    renderer.render(scene, camera);
+    drawUI();
+    }
+    animate();
+
+    window.addEventListener('resize', ()=>{
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    uiCanvas.width = innerWidth; uiCanvas.height = innerHeight;
+    });
+
+    function setStatus(msg){
+    document.getElementById('status').textContent = msg;
+    document.getElementById('status').style.display = msg ? 'block' : 'none';
+    }
+    function setInfo(icon,title,sub){
+    document.getElementById('infoIcon').textContent = icon;
+    document.getElementById('infoTitle').textContent = title;
+    document.getElementById('infoSub').textContent = sub;
+    }
+
+    window.addEventListener('load', function(){
+    var t = 0;
+    (function wait(){
+    if (typeof THREE !== 'undefined' && THREE.GLTFLoader){
+    threeReady = true;
+    if (pendingTopologyId){ STEPS = TOPOLOGIES[pendingTopologyId]||TOPOLOGIES.home; stepsDone = STEPS.map(()=>false); startFlow(); }
+    } else if (t++ < 30){ setTimeout(wait,200);
+    } else { setStatus('Failed to load Three.js'); }
+    })();
+    });
+</script>
+</body>
+</html>

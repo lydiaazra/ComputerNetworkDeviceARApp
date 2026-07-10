@@ -59,6 +59,8 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
     implementation("com.google.guava:guava:32.1.3-android")
 
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
 
     // ✅ Sceneform — for other activities (AvatarActivity, DeviceDisplay)
     implementation("com.gorisse.thomas.sceneform:sceneform:1.23.0")

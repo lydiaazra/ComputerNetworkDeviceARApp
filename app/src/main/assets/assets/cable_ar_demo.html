@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cable AR Demo</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;}
+        html,body{width:100%;height:100%;overflow:hidden;background:transparent;}
+        #threeCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+        #uiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;touch-action:none;}
+        #status{
+        position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;
+        background:rgba(8,14,28,0.85);color:#7EDCFF;font:bold 12px system-ui;
+        padding:6px 16px;border-radius:20px;pointer-events:none;white-space:nowrap;
+        border:1px solid #1F6FEB44;
+        }
+        #zoomHint{
+        position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:10;
+        background:rgba(8,14,28,0.75);color:#8FA5C3;font:10px system-ui;
+        padding:4px 12px;border-radius:14px;pointer-events:none;white-space:nowrap;
+        transition:opacity 0.4s;
+        }
+        #resetViewBtn{
+        position:fixed;bottom:130px;left:14px;z-index:10;
+        background:rgba(8,14,28,0.85);border:1px solid #1F6FEB44;color:#7EDCFF;
+        font:bold 11px system-ui;padding:8px 10px;border-radius:50%;
+        width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+        }
+        #infobar{
+        position:fixed;bottom:0;left:0;right:0;z-index:10;
+        background:rgba(13,17,23,0.92);border-top:1px solid #21262D;
+        padding:10px 14px 60px;display:flex;align-items:center;gap:10px;
+        }
+        .info-icon{font-size:20px;flex-shrink:0;}
+        .info-text{flex:1;}
+        .info-title{color:#fff;font-size:12px;font-weight:600;margin-bottom:2px;}
+        .info-sub{color:#8FA5C3;font-size:11px;line-height:1.4;}
+        #verifyBtn{
+        background:#1F6FEB;border:none;color:#fff;font-size:12px;font-weight:600;
+        padding:8px 16px;border-radius:8px;cursor:pointer;flex-shrink:0;
+        }
+        #verifyBtn:disabled{background:#21262D;color:#586071;}
+    </style>
+</head>
+<body>
+
+<!-- Three.js renders GLB here (pointer-events:none so it doesn't block touch) -->
+<canvas id="threeCanvas"></canvas>
+
+<!-- 2D cable interaction draws here -->
+<canvas id="uiCanvas"></canvas>
+
+<div id="status">Loading model...</div>
+<div id="zoomHint">🤏 Pinch to zoom · 2-finger drag to move · 1-finger to rotate</div>
+<button id="resetViewBtn" onclick="resetView()">⟳</button>
+
+<div id="infobar">
+    <span class="info-icon" id="infoIcon">🔌</span>
+    <div class="info-text">
+        <div class="info-title" id="infoTitle">Cable Port Challenge</div>
+        <div class="info-sub" id="infoSub">Loading the router model...</div>
+    </div>
+    <button id="verifyBtn" disabled onclick="verifyAssembly()">Verify</button>
+</div>
+
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+<script>
+    // ─── THREE.JS SETUP ───────────────────────────────────────────────────────────
+    const threeCanvas = document.getElementById('threeCanvas');
+    const renderer = new THREE.WebGLRenderer({canvas:threeCanvas,antialias:true,alpha:true});
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth, innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.01, 100);
+    camera.position.set(0, 1.2, 4.0);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.0);
+    key.position.set(2,4,3); scene.add(key);
+    const fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
+    fill.position.set(-3,0,-2); scene.add(fill);
+
+    const pivot = new THREE.Group();
+    scene.add(pivot);
+
+    // Port anchor positions in MODEL local space — adjust these after logging real coords
+    // These defaults work for a standard router GLB centered at origin, width ~2 units
+    const PORT_3D = [
+    { id:'WAN',  localPos: new THREE.Vector3(-0.85, -0.12,  0.62) },
+    { id:'LAN1', localPos: new THREE.Vector3(-0.28, -0.12,  0.62) },
+    { id:'LAN2', localPos: new THREE.Vector3( 0.28, -0.12,  0.62) },
+    { id:'LAN3', localPos: new THREE.Vector3( 0.85, -0.12,  0.62) },
+    ];
+
+    let modelLoaded = false;
+    let autoRotate = true, rotY = 0, prevTX = null;
+
+    // ─── USER ZOOM / PAN STATE ────────────────────────────────────────────────────
+    let userScale = 1, userOffsetX = 0, userOffsetY = 0;
+    const MIN_SCALE = 0.3, MAX_SCALE = 3.5;
+    let pinchStartDist = null, pinchStartScale = 1;
+    let panStartMid = null, panStartOffset = null;
+
+    window.resetView = function(){
+    userScale = 1; userOffsetX = 0; userOffsetY = 0; rotY = 0; autoRotate = true;
+    };
+
+    // ─── GLB LOADING via AndroidBridge ───────────────────────────────────────────
+    window.loadGlbFromBridge = function() {
+    if (!window.AndroidBridge) { setStatus('No bridge — using placeholder'); buildPlaceholder(); return; }
+    const total = AndroidBridge.getGlbLength();
+    if (total === 0) { buildPlaceholder(); return; }
+
+    setStatus('Loading model...');
+    const chunks = []; let offset = 0;
+
+    function fetchNext() {
+    if (offset >= total) {
+    const b64 = chunks.join('');
+    const binary = atob(b64);
+    const buf = new ArrayBuffer(binary.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i);
+
+    new THREE.GLTFLoader().parse(buf, '', function(gltf) {
+    const model = gltf.scene;
+    const box = new THREE.Box3().setFromObject(model);
+    const ctr = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const sc = 2.0 / Math.max(size.x, size.y, size.z);
+    model.scale.setScalar(sc);
+    model.position.sub(ctr.multiplyScalar(sc));
+    pivot.add(model);
+    modelLoaded = true;
+    setStatus('');
+    setInfo('🔌','Cable Port Challenge','Drag each cable to the correct port on the router!');
+    fadeHint();
+    if (window.AndroidBridge) AndroidBridge.onModelLoaded('cable_ar');
+    }, function(err) {
+    buildPlaceholder();
+    });
+    return;
+    }
+    const chunk = AndroidBridge.getGlbChunk(offset);
+    if (!chunk || chunk.length === 0) { buildPlaceholder(); return; }
+    chunks.push(chunk);
+    offset += chunk.length;
+    setStatus('Loading... ' + Math.round(offset/total*100) + '%');
+    setTimeout(fetchNext, 0);
+    }
+    fetchNext();
+    };
+
+    function buildPlaceholder() {
+    // Simple router-like shape if no GLB
+    const body = new THREE.Mesh(
+    new THREE.BoxGeometry(2.4, 0.5, 1.1),
+    new THREE.MeshStandardMaterial({color:0x2A3550})
+    );
+    pivot.add(body);
+    for(let i=0;i<3;i++){
+    const ant = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03,0.03,0.6,8),
+    new THREE.MeshStandardMaterial({color:0x30363D})
+    );
+    ant.position.set(-0.5+i*0.5, 0.55, -0.2);
+    pivot.add(ant);
+    }
+    modelLoaded = true;
+    setStatus('');
+    setInfo('🔌','Cable Port Challenge','Drag each cable to the correct port on the router!');
+    fadeHint();
+    }
+
+    function fadeHint(){
+    setTimeout(()=>{ const h=document.getElementById('zoomHint'); if(h) h.style.opacity='0'; }, 3500);
+    }
+
+    // ─── PROJECT 3D PORT → 2D SCREEN ─────────────────────────────────────────────
+    const _v3 = new THREE.Vector3();
+    function project3DtoScreen(localPos) {
+    _v3.copy(localPos);
+    pivot.localToWorld(_v3);
+    _v3.project(camera);
+    return {
+    x: (_v3.x + 1) / 2 * innerWidth,
+    y: (-_v3.y + 1) / 2 * innerHeight
+    };
+    }
+
+    // ─── 2D CABLE UI ─────────────────────────────────────────────────────────────
+    const uiCanvas = document.getElementById('uiCanvas');
+    const ctx = uiCanvas.getContext('2d');
+    uiCanvas.width = innerWidth;
+    uiCanvas.height = innerHeight;
+
+    const CABLE_DEFS = [
+    { id:'cRed',    label:'Red → WAN',    color:'#C73D5A', target:'WAN',  order:0 },
+    { id:'cBlue',   label:'Blue → LAN1',  color:'#1F6FEB', target:'LAN1', order:1 },
+    { id:'cGreen',  label:'Green → LAN2', color:'#0F9E70', target:'LAN2', order:2 },
+    { id:'cOrange', label:'Orange → LAN3','color':'#F59E0B', target:'LAN3', order:3 },
+    ];
+
+    const PORT_DEFS = [
+    { id:'WAN',  label:'WAN',  color:'#C73D5A', occupiedBy:null, correct:false },
+    { id:'LAN1', label:'LAN1', color:'#1F6FEB', occupiedBy:null, correct:false },
+    { id:'LAN2', label:'LAN2', color:'#0F9E70', occupiedBy:null, correct:false },
+    { id:'LAN3', label:'LAN3', color:'#F59E0B', occupiedBy:null, correct:false },
+    ];
+
+    // Tray position — left side of screen
+    function trayPos(order){ return { x: 40, y: innerHeight*0.32 + order*56 }; }
+
+    let cables = CABLE_DEFS.map(c => {
+    const home = trayPos(c.order);
+    return { ...c, x:home.x, y:home.y, homeX:home.x, homeY:home.y,
+    state: c.order===0?'ready':'locked', dockedPort:null };
+    });
+
+    let dragging = null, dragOx = 0, dragOy = 0;
+    const SNAP = 44;
+
+    function getPortScreenPos(portId) {
+    const p3 = PORT_3D.find(p=>p.id===portId);
+    if (!p3 || !modelLoaded) {
+    // fallback positions when model not loaded
+    const idx = PORT_DEFS.findIndex(p=>p.id===portId);
+    return { x: innerWidth*0.3 + idx*(innerWidth*0.14), y: innerHeight*0.52 };
+    }
+    return project3DtoScreen(p3.localPos);
+    }
+
+    function drawUI() {
+    ctx.clearRect(0,0,uiCanvas.width,uiCanvas.height);
+    const W=uiCanvas.width, H=uiCanvas.height;
+
+    // ── Port targets on model ─────────────────────────────────────────────────
+    PORT_DEFS.forEach(p => {
+    const pos = getPortScreenPos(p.id);
+    ctx.save();
+    ctx.strokeStyle = p.correct ? '#3EC26E' : p.color;
+    ctx.lineWidth = p.correct ? 3 : 2;
+    ctx.setLineDash(p.correct ? [] : [4,3]);
+    ctx.beginPath();ctx.arc(pos.x, pos.y, 18, 0, Math.PI*2);ctx.stroke();
+    ctx.setLineDash([]);
+    if(p.correct){
+    ctx.fillStyle='#3EC26E33';ctx.beginPath();ctx.arc(pos.x,pos.y,18,0,Math.PI*2);ctx.fill();
+    }
+    ctx.fillStyle = p.correct ? '#3EC26E' : '#C9D1D9';
+    ctx.font='bold 9px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(p.label, pos.x, pos.y + 28);
+    ctx.restore();
+    });
+
+    // ── Tray label ────────────────────────────────────────────────────────────
+    ctx.fillStyle='#8FA5C3';ctx.font='bold 10px system-ui';
+    ctx.textAlign='left';ctx.textBaseline='top';
+    ctx.fillText('🗂 Cables', 14, innerHeight*0.3-18);
+
+    // ── Cables ────────────────────────────────────────────────────────────────
+    cables.forEach(c => {
+    if (dragging && dragging.id===c.id) return;
+    ctx.save();
+    ctx.globalAlpha = c.state==='locked' ? 0.3 : 1;
+    ctx.fillStyle = c.color;
+    ctx.beginPath();ctx.arc(c.x, c.y, 14, 0, Math.PI*2);ctx.fill();
+    ctx.strokeStyle = c.state==='correct'?'#3EC26E':'rgba(255,255,255,0.7)';
+    ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle = c.state==='locked'?'#586071':'#fff';
+    ctx.font='9px system-ui';ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.fillText(c.label+(c.state==='locked'?' 🔒':c.state==='correct'?' ✅':''), c.x+18, c.y);
+    ctx.restore();
+    });
+
+    // ── Dragging cable on top ─────────────────────────────────────────────────
+    if(dragging){
+    ctx.fillStyle=dragging.color;
+    ctx.beginPath();ctx.arc(dragging.x,dragging.y,18,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();
+    // draw line toward nearest port
+    const np=nearestPort(dragging.x,dragging.y);
+    if(np){
+    const pos=getPortScreenPos(np.id);
+    ctx.save();ctx.strokeStyle=dragging.color+'88';ctx.lineWidth=3;
+    ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(dragging.x,dragging.y);ctx.lineTo(pos.x,pos.y);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+    }
+    ctx.fillStyle='#fff';ctx.font='bold 11px system-ui';
+    ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.fillText(dragging.label,dragging.x,dragging.y+22);
+    }
+
+    // ── Score ─────────────────────────────────────────────────────────────────
+    const done=cables.filter(c=>c.state==='correct').length;
+    ctx.fillStyle=done===cables.length?'#3EC26E':'#8FA5C3';
+    ctx.font='bold 11px system-ui';ctx.textAlign='right';ctx.textBaseline='top';
+    ctx.fillText(done+'/'+cables.length+' ✓', W-14, 14);
+    }
+
+    // ── Input helpers ─────────────────────────────────────────────────────────────
+    function cp(e){
+    const r=uiCanvas.getBoundingClientRect();
+    const s=e.touches?e.touches[0]:e.changedTouches?e.changedTouches[0]:e;
+    return{x:(s.clientX-r.left)*(uiCanvas.width/r.width),y:(s.clientY-r.top)*(uiCanvas.height/r.height)};
+    }
+    function hitCable(x,y){ return cables.find(c=>Math.hypot(x-c.x,y-c.y)<22&&c.state!=='correct'); }
+    function nearestPort(x,y){
+    let best=null,bestD=SNAP;
+    PORT_DEFS.forEach(p=>{
+    if(p.correct)return;
+    const pos=getPortScreenPos(p.id);
+    const d=Math.hypot(x-pos.x,y-pos.y);
+    if(d<bestD){bestD=d;best=p;}
+    });
+    return best;
+    }
+    function touchDist(t1,t2){ return Math.hypot(t1.clientX-t2.clientX, t1.clientY-t2.clientY); }
+    function touchMid(t1,t2){ return { x:(t1.clientX+t2.clientX)/2, y:(t1.clientY+t2.clientY)/2 }; }
+
+    // ── Touch: start ──────────────────────────────────────────────────────────────
+    uiCanvas.addEventListener('touchstart',e=>{
+    e.preventDefault();
+
+    if (e.touches.length >= 2) {
+    // entering pinch/pan mode — cancel any single-finger action
+    dragging=null; prevTX=null;
+    pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+    pinchStartScale = userScale;
+    panStartMid = touchMid(e.touches[0], e.touches[1]);
+    panStartOffset = { x:userOffsetX, y:userOffsetY };
+    document.getElementById('zoomHint').style.opacity='1';
+    return;
+    }
+
+    const {x,y}=cp(e);
+    autoRotate=false;
+    const c=hitCable(x,y);
+    if(!c){
+    // allow model rotation if not touching a cable
+    prevTX=x;return;
+    }
+    if(c.state==='locked'){setInfo('🔒','Locked!','Connect the previous cable first.');return;}
+    dragging=c;dragOx=x-c.x;dragOy=y-c.y;
+    },{passive:false});
+
+    // ── Touch: move ───────────────────────────────────────────────────────────────
+    uiCanvas.addEventListener('touchmove',e=>{
+    e.preventDefault();
+
+    if (e.touches.length >= 2 && pinchStartDist!=null) {
+    const dist = touchDist(e.touches[0], e.touches[1]);
+    const factor = dist / pinchStartDist;
+    userScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, pinchStartScale * factor));
+
+    const mid = touchMid(e.touches[0], e.touches[1]);
+    const r = uiCanvas.getBoundingClientRect();
+    const dxPix = (mid.x - panStartMid.x) * (uiCanvas.width/r.width);
+    const dyPix = (mid.y - panStartMid.y) * (uiCanvas.height/r.height);
+    // approximate world units per pixel at the model's depth plane
+    const worldPerPixel = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov/2)) * camera.position.z) / uiCanvas.height;
+    userOffsetX = panStartOffset.x + dxPix * worldPerPixel;
+    userOffsetY = panStartOffset.y - dyPix * worldPerPixel;
+    return;
+    }
+
+    const {x,y}=cp(e);
+    if(dragging){dragging.x=x-dragOx;dragging.y=y-dragOy;}
+    else if(prevTX!==null){rotY+=(x-prevTX)*0.4;prevTX=x;}
+    },{passive:false});
+
+    // ── Touch: end ────────────────────────────────────────────────────────────────
+    uiCanvas.addEventListener('touchend',e=>{
+    e.preventDefault();
+
+    if (e.touches.length < 2) { pinchStartDist=null; panStartMid=null; }
+
+    if(dragging){
+    const {x,y}=cp(e);
+    const port=nearestPort(x,y);
+    if(port){dockCable(dragging,port);}
+    else{dragging.x=dragging.homeX;dragging.y=dragging.homeY;
+    setInfo('🔌','Try again!','Drag the cable closer to a port on the router.');}
+    dragging=null;
+    }
+    prevTX=null;
+    },{passive:false});
+
+    // ── Game logic ────────────────────────────────────────────────────────────────
+    function dockCable(cable,port){
+    if(cable.dockedPort){
+    const old=PORT_DEFS.find(p=>p.id===cable.dockedPort);
+    if(old){old.occupiedBy=null;}
+    }
+    const pos=getPortScreenPos(port.id);
+    cable.x=pos.x;cable.y=pos.y;
+    cable.dockedPort=port.id;cable.state='docked';
+    port.occupiedBy=cable.id;
+    const next=cables.find(c=>c.order===cable.order+1&&c.state==='locked');
+    if(next){next.state='ready';}
+    document.getElementById('verifyBtn').disabled=false;
+    setInfo('✅','Connected!',cable.label+' plugged into '+port.label+'. Keep going or tap Verify!');
+    }
+
+    function verifyAssembly(){
+    let correct=0;
+    cables.forEach(c=>{
+    if(c.state==='correct')return;
+    if(c.state!=='docked')return;
+    const port=PORT_DEFS.find(p=>p.id===c.dockedPort);
+    if(c.target===c.dockedPort){
+    c.state='correct';port.correct=true;port.occupiedBy=c.id;correct++;
+    } else {
+    port.occupiedBy=null;c.dockedPort=null;c.state='ready';
+    c.x=c.homeX;c.y=c.homeY;
+    }
+    });
+    const total=cables.filter(c=>c.state==='correct').length;
+    if(total===cables.length){
+    setInfo('🎉','All correct!','You connected every cable to the right port. Well done!');
+    document.getElementById('verifyBtn').disabled=true;
+    } else {
+    setInfo('❌',total+'/'+cables.length+' correct','Wrong cables returned. Try again!');
+    }
+    }
+
+    window.resetCableDemo=function(){
+    cables.forEach((c,i)=>{
+    const home=trayPos(i);
+    c.x=home.x;c.y=home.y;c.homeX=home.x;c.homeY=home.y;
+    c.state=i===0?'ready':'locked';c.dockedPort=null;
+    });
+    PORT_DEFS.forEach(p=>{p.occupiedBy=null;p.correct=false;});
+    dragging=null;autoRotate=true;
+    resetView();
+    document.getElementById('verifyBtn').disabled=true;
+    setInfo('🔌','Cable Port Challenge','Drag each cable to the correct port on the router!');
+    };
+
+    // ─── RENDER LOOP ──────────────────────────────────────────────────────────────
+    function animate(){
+    requestAnimationFrame(animate);
+    if(autoRotate) rotY+=0.3;
+    pivot.rotation.y=THREE.MathUtils.degToRad(rotY);
+    pivot.scale.setScalar(userScale);
+    pivot.position.set(userOffsetX, userOffsetY, 0);
+    renderer.render(scene,camera);
+    drawUI();
+    }
+    animate();
+
+    // ─── RESIZE ───────────────────────────────────────────────────────────────────
+    window.addEventListener('resize',()=>{
+    camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth,innerHeight);
+    uiCanvas.width=innerWidth;uiCanvas.height=innerHeight;
+    });
+
+    // ─── UTILS ────────────────────────────────────────────────────────────────────
+    function setStatus(msg){ document.getElementById('status').textContent=msg;
+    document.getElementById('status').style.display=msg?'block':'none';}
+    function setInfo(icon,title,sub){
+    document.getElementById('infoIcon').textContent=icon;
+    document.getElementById('infoTitle').textContent=title;
+    document.getElementById('infoSub').textContent=sub;
+    }
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────────
+    window.addEventListener('load',function(){
+    var t=0;
+    (function wait(){
+    if(typeof THREE!=='undefined'&&THREE.GLTFLoader){
+    if(window.AndroidBridge) AndroidBridge.log('cable_ar_ready');
+    else{buildPlaceholder();setInfo('🔌','Cable Port Challenge','Drag each cable to the correct port!');}
+    } else if(t++<30){ setTimeout(wait,200);
+    } else { setStatus('Failed to load Three.js'); }
+    })();
+    });
+</script>
+</body>
+</html>

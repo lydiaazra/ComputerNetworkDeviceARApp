@@ -10,6 +10,7 @@ import android.speech.tts.UtteranceProgressListener;
 import android.util.Base64;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -25,6 +26,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -35,19 +38,28 @@ import java.io.InputStream;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
-public class CameraARActivity extends AppCompatActivity
+/**
+ * Minimal "avatar + device only" AR screen — no text info cards. The avatar is
+ * the sole narrator, speaking the full device explanation aloud via voice.
+ * Reuses the exact same GLB-loading (ar_model.html) and avatar+TTS pattern
+ * already proven in CameraARActivity / AssemblyARActivity.
+ *
+ * Launch contract: same as CameraARActivity — pass deviceName as an Intent extra.
+ */
+public class DeviceVoiceARActivity extends AppCompatActivity
         implements TextToSpeech.OnInitListener {
 
-    private static final String TAG                    = "CameraAR";
-    private static final int    CAMERA_PERMISSION_CODE = 300;
+    private static final String TAG                    = "DeviceVoiceAR";
+    private static final int    CAMERA_PERMISSION_CODE = 301;
     private static final int    CHUNK_SIZE             = 100_000;
 
     private PreviewView    cameraPreview;
     private WebView        modelWebView;
     private WebView        avatarWebView;
-    private TextView       tvDeviceTitle, tvDeviceSubtitle, tvHint;
-    private TextView       tvWhatItDoes, tvHowItWorks, tvWhyItMatters;
-    private MaterialButton btnPlace, btnSpeak, btnBack;
+    private TextView       tvDeviceTitle, tvHint;
+    private TextView       tvInfoTitle, tvInfoWhatItDoes, tvInfoHowItWorks, tvInfoWhyItMatters;
+    private View           infoPanel;
+    private MaterialButton btnSpeak, btnBack, btnInfoToggle, btnInfoClose;
 
     private String  deviceName;
     private String  whatItDoes;
@@ -58,14 +70,10 @@ public class CameraARActivity extends AppCompatActivity
     private boolean isPageReady = false;
     private boolean isGlbReady  = false;
 
-    // Avatar assets — same avatar.glb reused from CombinedARActivity / AssemblyARActivity.
     private String avatarBase64  = null;
     private String threeJs       = null;
     private String gltfLoaderJs  = null;
 
-    // TTS drives both the spoken explanation and the avatar's lip-sync/gesture
-    // animation. No Inworld here — the explanation text is already authored per
-    // device in setupDeviceData(), so an on-device, offline TTS call is enough.
     private TextToSpeech tts;
     private boolean      ttsReady    = false;
     private boolean      avatarReady = false;
@@ -78,18 +86,15 @@ public class CameraARActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera_ar);
+        setContentView(R.layout.activity_device_voice_ar);
 
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName == null || deviceName.isEmpty()) deviceName = "Router";
 
-        Log.d(TAG, "=== Device received: '" + deviceName + "' ===");
-
-        // Load GLB FIRST before setupDeviceData() renames deviceName
         loadGlbInBackground();
-
         setupDeviceData();
         bindViews();
+        setupNavBarInsets();
         setupModelWebView();
         setupAvatarWebView();
         setupTTS();
@@ -131,8 +136,6 @@ public class CameraARActivity extends AppCompatActivity
 
     private String glbFileName() {
         String name = deviceName.toLowerCase().trim();
-        Log.d(TAG, "glbFileName() input: '" + name + "'");
-
         if (name.contains("switch"))                                               return "switch.glb";
         if (name.contains("hub"))                                                  return "hub.glb";
         if (name.contains("firewall"))                                             return "firewall.glb";
@@ -142,19 +145,11 @@ public class CameraARActivity extends AppCompatActivity
         if (name.contains("gateway"))                                              return "gateway.glb";
         if (name.contains("modem"))                                                return "modem.glb";
         if (name.contains("router"))                                               return "router.glb";
-
-        Log.w(TAG, "No match for '" + name + "' — fallback router.glb");
         return "router.glb";
     }
 
-    // -------------------------------------------------------------------------
-    // Load GLB in background — calls tryLoadModel when done
-    // -------------------------------------------------------------------------
-
     private void loadGlbInBackground() {
         String file = glbFileName();
-        Log.d(TAG, "GLB file to load: " + file);
-
         String[] paths = {
                 "assets/models/" + file,
                 "models/" + file,
@@ -164,30 +159,23 @@ public class CameraARActivity extends AppCompatActivity
 
         new Thread(() -> {
             for (String path : paths) {
-                Log.d(TAG, "Trying path: " + path);
                 try {
                     InputStream is  = getAssets().open(path);
                     byte[]      buf = streamToBytes(is);
                     glbBase64 = Base64.encodeToString(buf, Base64.NO_WRAP);
-                    Log.d(TAG, "✅ SUCCESS: " + path + " (" + buf.length / 1024 + " KB)");
+                    Log.d(TAG, "GLB loaded: " + path);
                     break;
                 } catch (OutOfMemoryError e) {
-                    Log.e(TAG, "❌ OOM at path: " + path);
+                    Log.e(TAG, "OOM at path: " + path);
                     glbBase64 = null;
                     break;
                 } catch (IOException e) {
-                    Log.w(TAG, "❌ Not found: " + path);
+                    Log.w(TAG, "Not found: " + path);
                 } catch (Exception e) {
-                    Log.e(TAG, "❌ Error at " + path + ": " + e.getMessage());
+                    Log.e(TAG, "Error at " + path + ": " + e.getMessage());
                 }
             }
-
-            if (glbBase64 == null) {
-                Log.e(TAG, "❌ ALL PATHS FAILED for: " + file);
-            }
-
             isGlbReady = true;
-            // Both conditions met — trigger from whichever finishes last
             runOnUiThread(this::tryLoadModel);
         }).start();
     }
@@ -200,28 +188,17 @@ public class CameraARActivity extends AppCompatActivity
         return out.toByteArray();
     }
 
-    // -------------------------------------------------------------------------
-    // tryLoadModel — fires only when BOTH page and GLB are ready
-    // -------------------------------------------------------------------------
-
     private void tryLoadModel() {
-        if (!isPageReady || !isGlbReady) {
-            Log.d(TAG, "tryLoadModel: waiting — pageReady=" + isPageReady + " glbReady=" + isGlbReady);
-            return;
-        }
-
-        Log.d(TAG, "tryLoadModel: BOTH READY — loading now");
-
+        if (!isPageReady || !isGlbReady) return;
         String multiplier = glbFileName().equals("router.glb") ? "0.62" : "1.0";
         String fn = glbBase64 != null
                 ? "window.MODEL_SCALE_MULTIPLIER=" + multiplier + "; loadGlbFromBridge();"
                 : "showFallback('" + deviceName + "');";
-
         modelWebView.evaluateJavascript(fn, null);
     }
 
     // -------------------------------------------------------------------------
-    // Device data
+    // Device data — same content as CameraARActivity
     // -------------------------------------------------------------------------
 
     private void setupDeviceData() {
@@ -230,62 +207,83 @@ public class CameraARActivity extends AppCompatActivity
         if (name.contains("switch")) {
             deviceName   = "Layer 2 Switch";
             whatItDoes   = "Connects multiple devices in a LAN using MAC addresses to forward Ethernet frames to the correct destination port.";
-            howItWorks   = "• Learns the MAC address of each connected device.\n• Reads destination MAC on each frame.\n• Forwards only to the correct port.\n• Floods if destination is unknown.";
+            howItWorks   = "Learns the MAC address of each connected device. Reads the destination MAC on each frame. Forwards only to the correct port. Floods if the destination is unknown.";
             whyItMatters = "Reduces unnecessary traffic by delivering data only to the intended device, improving overall LAN performance.";
 
         } else if (name.contains("hub")) {
             deviceName   = "Layer 1 Hub";
             whatItDoes   = "Connects multiple Ethernet devices and broadcasts all incoming data to every connected port.";
-            howItWorks   = "• Receives data on one port.\n• Broadcasts to ALL other ports.\n• No filtering — every device sees all traffic.\n• Creates a shared collision domain.";
+            howItWorks   = "Receives data on one port. Broadcasts to all other ports. No filtering — every device sees all traffic. Creates a shared collision domain.";
             whyItMatters = "Legacy device — understanding hubs explains why switches replaced them to eliminate collisions.";
 
         } else if (name.contains("firewall")) {
             deviceName   = "Firewall";
             whatItDoes   = "Monitors and controls incoming and outgoing traffic based on predefined security rules.";
-            howItWorks   = "• Inspects each packet against a ruleset.\n• Blocks unauthorised traffic.\n• Performs NAT to hide internal IPs.\n• Operates from Layer 3 up to Layer 7.";
+            howItWorks   = "Inspects each packet against a ruleset. Blocks unauthorised traffic. Performs network address translation to hide internal IPs. Operates from Layer 3 up to Layer 7.";
             whyItMatters = "First line of defence — without a firewall, internal devices are exposed directly to internet threats.";
 
         } else if (name.contains("access") || name.contains("wap") || name.equals("ap")) {
             deviceName   = "Wireless Access Point";
             whatItDoes   = "Allows wireless devices to connect to a wired LAN using Wi-Fi, acting as a bridge between wireless clients and the network.";
-            howItWorks   = "• Broadcasts an SSID for devices to detect.\n• Authenticates connecting devices.\n• Bridges wireless frames to wired Ethernet.\n• Operates at OSI Layer 2.";
+            howItWorks   = "Broadcasts an SSID for devices to detect. Authenticates connecting devices. Bridges wireless frames to wired Ethernet. Operates at OSI Layer 2.";
             whyItMatters = "Enables mobility — users stay connected to the network without physical cables as they move around.";
 
         } else if (name.contains("nic") || name.contains("network interface")) {
             deviceName   = "Network Interface Card";
             whatItDoes   = "Hardware component that connects a computer to a network, providing the physical interface for communication.";
-            howItWorks   = "• Converts data to electrical or optical signals.\n• Has a unique MAC address burned in at manufacturing.\n• Handles framing at OSI Layer 2.\n• Can be wired (Ethernet) or wireless (Wi-Fi).";
+            howItWorks   = "Converts data to electrical or optical signals. Has a unique MAC address burned in at manufacturing. Handles framing at OSI Layer 2. Can be wired or wireless.";
             whyItMatters = "Every networked device has a NIC — it is the physical gateway between a device and the network medium.";
 
         } else if (name.contains("repeat")) {
             deviceName   = "Repeater";
             whatItDoes   = "Amplifies or regenerates a network signal so it can travel longer distances without degrading.";
-            howItWorks   = "• Receives a weakened signal on one port.\n• Regenerates and amplifies it.\n• Retransmits out the other port.\n• Does not filter or process data.";
-            whyItMatters = "Extends network reach beyond the 100m cable limit without losing signal quality.";
+            howItWorks   = "Receives a weakened signal on one port. Regenerates and amplifies it. Retransmits out the other port. Does not filter or process data.";
+            whyItMatters = "Extends network reach beyond the 100 metre cable limit without losing signal quality.";
 
         } else if (name.contains("gateway")) {
             deviceName   = "Gateway";
             whatItDoes   = "Connects two networks that use different protocols, translating between them so they can communicate.";
-            howItWorks   = "• Receives data from one network.\n• Translates the protocol or format.\n• Forwards to the destination network.\n• Can operate at any OSI layer.";
-            whyItMatters = "Essential for connecting networks that speak different protocols — e.g. connecting a LAN to the internet.";
+            howItWorks   = "Receives data from one network. Translates the protocol or format. Forwards it to the destination network. Can operate at any OSI layer.";
+            whyItMatters = "Essential for connecting networks that speak different protocols — for example, connecting a LAN to the internet.";
 
         } else if (name.contains("modem")) {
             deviceName   = "Modem";
             whatItDoes   = "Modulates and demodulates signals to enable data transmission over telephone, cable, or fibre connections.";
-            howItWorks   = "• Converts digital data to analogue signals.\n• Converts incoming analogue signals back to digital.\n• Connects your local network to the ISP.\n• Often combined with a router in home devices.";
+            howItWorks   = "Converts digital data to analogue signals. Converts incoming analogue signals back to digital. Connects your local network to the ISP. Often combined with a router in home devices.";
             whyItMatters = "The link between your local network and the internet — without it, no external connectivity is possible.";
 
         } else {
             deviceName   = "Router";
             whatItDoes   = "Connects multiple networks and forwards data packets between them using IP addresses.";
-            howItWorks   = "• Reads the destination IP address in each packet.\n• Looks up the best route in its routing table.\n• Forwards the packet toward the destination.\n• Operates at OSI Layer 3 (Network layer).";
+            howItWorks   = "Reads the destination IP address in each packet. Looks up the best route in its routing table. Forwards the packet toward the destination. Operates at OSI Layer 3.";
             whyItMatters = "The backbone of the internet — every website request passes through multiple routers to reach its destination.";
         }
     }
 
-    /** Flowing, TTS-friendly version — skips the bullet list, which reads awkwardly aloud. */
+    /** Full narration — this screen has no text cards, so the avatar covers everything. */
     private String spokenExplanation() {
-        return "This is the " + deviceName + ". " + whatItDoes + " " + whyItMatters;
+        return "This is the " + deviceName + ". " + whatItDoes + " " + howItWorks + " " + whyItMatters;
+    }
+
+    // -------------------------------------------------------------------------
+    // Nav bar clearance — dynamically pushes the bottom-anchored UI (hint, and
+    // by constraint chain, the avatar above it) clear of the system navigation
+    // bar, whether the device uses 3-button or gesture navigation.
+    // -------------------------------------------------------------------------
+
+    private void setupNavBarInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(tvHint, (v, insets) -> {
+            int navBottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
+            ViewGroup.MarginLayoutParams params =
+                    (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            params.bottomMargin = Math.max(navBottom, dp(24)) + dp(55);
+            v.setLayoutParams(params);
+            return insets;
+        });
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density);
     }
 
     // -------------------------------------------------------------------------
@@ -293,25 +291,28 @@ public class CameraARActivity extends AppCompatActivity
     // -------------------------------------------------------------------------
 
     private void bindViews() {
-        cameraPreview    = findViewById(R.id.cameraPreview);
-        modelWebView     = findViewById(R.id.modelWebView);
-        avatarWebView    = findViewById(R.id.avatarWebView);
-        tvHint           = findViewById(R.id.tvHint);
-        tvDeviceTitle    = findViewById(R.id.tvDeviceTitle);
-        tvDeviceSubtitle = findViewById(R.id.tvDeviceSubtitle);
-        tvWhatItDoes     = findViewById(R.id.tvWhatItDoes);
-        tvHowItWorks     = findViewById(R.id.tvHowItWorks);
-        tvWhyItMatters   = findViewById(R.id.tvWhyItMatters);
-        btnPlace         = findViewById(R.id.btnPlace);
-        btnSpeak         = findViewById(R.id.btnSpeak);
-        btnBack          = findViewById(R.id.btnBack);
+        cameraPreview = findViewById(R.id.cameraPreview);
+        modelWebView  = findViewById(R.id.modelWebView);
+        avatarWebView = findViewById(R.id.avatarWebView);
+        tvHint        = findViewById(R.id.tvHint);
+        tvDeviceTitle = findViewById(R.id.tvDeviceTitle);
+        btnSpeak      = findViewById(R.id.btnSpeak);
+        btnBack       = findViewById(R.id.btnBack);
+        btnInfoToggle = findViewById(R.id.btnInfoToggle);
+        btnInfoClose  = findViewById(R.id.btnInfoClose);
+        infoPanel     = findViewById(R.id.infoPanel);
+        tvInfoTitle        = findViewById(R.id.tvInfoTitle);
+        tvInfoWhatItDoes   = findViewById(R.id.tvInfoWhatItDoes);
+        tvInfoHowItWorks   = findViewById(R.id.tvInfoHowItWorks);
+        tvInfoWhyItMatters = findViewById(R.id.tvInfoWhyItMatters);
 
         tvDeviceTitle.setText(deviceName);
-        tvDeviceSubtitle.setText("Detailed explanation of this device function");
-        tvWhatItDoes.setText(whatItDoes);
-        tvHowItWorks.setText(howItWorks);
-        tvWhyItMatters.setText(whyItMatters);
         tvHint.setText("Loading 3D model...");
+
+        tvInfoTitle.setText(deviceName);
+        tvInfoWhatItDoes.setText(whatItDoes);
+        tvInfoHowItWorks.setText(howItWorks);
+        tvInfoWhyItMatters.setText(whyItMatters);
     }
 
     // -------------------------------------------------------------------------
@@ -337,7 +338,7 @@ public class CameraARActivity extends AppCompatActivity
     }
 
     // -------------------------------------------------------------------------
-    // Device Model WebView
+    // Device Model WebView — reuses the existing ar_model.html
     // -------------------------------------------------------------------------
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -351,15 +352,12 @@ public class CameraARActivity extends AppCompatActivity
         s.setAllowFileAccess(true);
 
         modelWebView.addJavascriptInterface(new ModelBridge(), "AndroidBridge");
-
-        // page_ready signal from JS triggers tryLoadModel via log()
         modelWebView.setWebViewClient(new WebViewClient());
-
         modelWebView.loadUrl("file:///android_asset/assets/ar_model.html");
     }
 
     // -------------------------------------------------------------------------
-    // Avatar WebView — identical pattern to AssemblyARActivity / CombinedARActivity
+    // Avatar WebView
     // -------------------------------------------------------------------------
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -445,7 +443,6 @@ public class CameraARActivity extends AppCompatActivity
         maybeAutoSpeak();
     }
 
-    /** Fires once, as soon as both the avatar model and TTS are ready. */
     private void maybeAutoSpeak() {
         if (hasSpoken || !ttsReady || !avatarReady) return;
         hasSpoken = true;
@@ -467,46 +464,42 @@ public class CameraARActivity extends AppCompatActivity
     // -------------------------------------------------------------------------
 
     private void setupButtons() {
-        btnPlace.setOnClickListener(v ->
-                modelWebView.evaluateJavascript("resetCamera()", null));
         btnSpeak.setOnClickListener(v -> speakExplanation());
         btnBack.setOnClickListener(v -> finish());
+        btnInfoToggle.setOnClickListener(v -> showInfoPanel(true));
+        btnInfoClose.setOnClickListener(v -> showInfoPanel(false));
+    }
+
+    private void showInfoPanel(boolean show) {
+        infoPanel.setVisibility(show ? View.VISIBLE : View.GONE);
+        btnInfoClose.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     // -------------------------------------------------------------------------
-    // JS Bridge — device model WebView
+    // JS Bridges
     // -------------------------------------------------------------------------
 
     private class ModelBridge {
-
         @JavascriptInterface
         public int getGlbLength() {
-            int len = glbBase64 != null ? glbBase64.length() : 0;
-            Log.d(TAG, "getGlbLength() = " + len);
-            return len;
+            return glbBase64 != null ? glbBase64.length() : 0;
         }
-
         @JavascriptInterface
         public String getGlbChunk(int offset) {
             if (glbBase64 == null || offset >= glbBase64.length()) return "";
-            return glbBase64.substring(offset,
-                    Math.min(offset + CHUNK_SIZE, glbBase64.length()));
+            return glbBase64.substring(offset, Math.min(offset + CHUNK_SIZE, glbBase64.length()));
         }
-
         @JavascriptInterface
         public void onModelLoaded(String s) {
             runOnUiThread(() -> tvHint.setText("Drag to rotate  •  Pinch to zoom"));
         }
-
         @JavascriptInterface
         public void onModelError(String m) {
             Log.e(TAG, "Model error: " + m);
             runOnUiThread(() -> tvHint.setText("Showing 3D placeholder"));
         }
-
         @JavascriptInterface
         public void log(String m) {
-            Log.d(TAG, "JS: " + m);
             if ("page_ready".equals(m)) {
                 isPageReady = true;
                 runOnUiThread(() -> tryLoadModel());
@@ -514,23 +507,18 @@ public class CameraARActivity extends AppCompatActivity
         }
     }
 
-    // -------------------------------------------------------------------------
-    // JS Bridge — avatar WebView
-    // -------------------------------------------------------------------------
-
     private class AvatarBridge {
         @JavascriptInterface
         public void onAvatarLoaded() {
             avatarReady = true;
-            runOnUiThread(this::triggerAutoSpeak);
+            runOnUiThread(() -> maybeAutoSpeak());
         }
-        private void triggerAutoSpeak() { maybeAutoSpeak(); }
         @JavascriptInterface
         public void log(String m) { Log.d(TAG, "Avatar JS: " + m); }
     }
 
     // -------------------------------------------------------------------------
-    // Avatar HTML — identical scene/lip-sync logic to CombinedARActivity / AssemblyARActivity
+    // Avatar HTML — identical scene/lip-sync logic used across the app
     // -------------------------------------------------------------------------
 
     private String buildAvatarHtml() {
@@ -585,6 +573,7 @@ public class CameraARActivity extends AppCompatActivity
                 "  new THREE.GLTFLoader().load(url,function(gltf){" +
                 "    avatarModel=gltf.scene;scene.add(avatarModel);" +
                 "    avatarModel.rotation.y=0.3;" +
+                "    avatarModel.position.x=-0.35;" +
                 "    avatarModel.traverse(function(node){" +
                 "      var n=(node.name||'').toLowerCase();" +
                 "      if(!headBone&&n.includes('head'))headBone=node;" +
