@@ -437,7 +437,7 @@
             android:id="@+id/cardGateway"
             android:layout_width="match_parent"
             android:layout_height="90dp"
-            android:layout_marginBottom="28dp"
+            android:layout_marginBottom="14dp"
             app:cardCornerRadius="16dp"
             app:cardElevation="6dp"
             app:cardBackgroundColor="#0E1F3D">
@@ -475,6 +475,120 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Connects different networks • All OSI Layers"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Server -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardServer"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="14dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="🗄️"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Server"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Stores and serves data • Application Layer"
+                        android:textColor="#8FA5C3"
+                        android:textSize="12sp"
+                        android:layout_marginTop="3dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="#8FA5C3"
+                    android:textSize="28sp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Modem -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardModem"
+            android:layout_width="match_parent"
+            android:layout_height="90dp"
+            android:layout_marginBottom="28dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="6dp"
+            app:cardBackgroundColor="#0E1F3D">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:text="📞"
+                    android:textSize="30sp"
+                    android:gravity="center"/>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Modem"
+                        android:textColor="#FFFFFF"
+                        android:textSize="18sp"
+                        android:textStyle="bold"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Links your network to the ISP • Physical Layer"
                         android:textColor="#8FA5C3"
                         android:textSize="12sp"
                         android:layout_marginTop="3dp"/>

@@ -3,6 +3,8 @@ package com.example.computernetworkdevicearapp;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.graphics.Color;
+import android.media.AudioAttributes;
+import android.media.SoundPool;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Base64;
@@ -62,6 +64,14 @@ public class ARQuizActivity extends AppCompatActivity {
     private boolean isGlbReady      = false;
     private String  pendingDevice   = null; // device waiting to be rendered
 
+    // Quiz feedback sound effects — SoundPool is the recommended API for short,
+    // low-latency UI sounds (unlike MediaPlayer, which has noticeable start-up
+    // lag not suitable for rapid-fire quiz feedback).
+    private SoundPool soundPool;
+    private int        correctSoundId = -1;
+    private int        wrongSoundId   = -1;
+    private boolean     soundsLoaded  = false;
+
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
@@ -82,6 +92,7 @@ public class ARQuizActivity extends AppCompatActivity {
         }
 
         bindViews();
+        setupSounds();
         setupModelWebView();
         startCamera();
         loadQuestions();
@@ -90,6 +101,7 @@ public class ARQuizActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (modelWebView != null) modelWebView.destroy();
+        if (soundPool != null) soundPool.release();
         super.onDestroy();
     }
 
@@ -113,6 +125,45 @@ public class ARQuizActivity extends AppCompatActivity {
         btnOptionB.setOnClickListener(v -> checkAnswer("B"));
         btnOptionC.setOnClickListener(v -> checkAnswer("C"));
         btnOptionD.setOnClickListener(v -> checkAnswer("D"));
+    }
+
+    // -------------------------------------------------------------------------
+    // Sound effects
+    // -------------------------------------------------------------------------
+
+    private void setupSounds() {
+        AudioAttributes attrs = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+        soundPool = new SoundPool.Builder()
+                .setMaxStreams(2)
+                .setAudioAttributes(attrs)
+                .build();
+
+        soundPool.setOnLoadCompleteListener((pool, sampleId, status) -> {
+            if (status == 0) soundsLoaded = true;
+            else Log.w(TAG, "Sound load failed for sample " + sampleId);
+        });
+
+        // Expects res/raw/sfx_correct.mp3 and res/raw/sfx_wrong.mp3 — add these
+        // two short (<1s) sound files to the project; any royalty-free "ding"
+        // and "buzz" clip works (e.g. Mixkit, Pixabay Sound Effects, Freesound).
+        try {
+            correctSoundId = soundPool.load(this, R.raw.sfx_correct, 1);
+            wrongSoundId   = soundPool.load(this, R.raw.sfx_wrong, 1);
+        } catch (Exception e) {
+            Log.w(TAG, "Sound resources not found — add sfx_correct/sfx_wrong to res/raw. " + e.getMessage());
+        }
+    }
+
+    private void playCorrectSound() {
+        if (soundsLoaded && correctSoundId != -1) soundPool.play(correctSoundId, 1f, 1f, 1, 0, 1f);
+    }
+
+    private void playWrongSound() {
+        if (soundsLoaded && wrongSoundId != -1) soundPool.play(wrongSoundId, 1f, 1f, 1, 0, 1f);
     }
 
     // -------------------------------------------------------------------------
@@ -349,9 +400,11 @@ public class ARQuizActivity extends AppCompatActivity {
         if (selected.equals(correct)) {
             score++;
             highlightButton(selected, true);
+            playCorrectSound();
         } else {
             highlightButton(selected, false);
             if (correct != null) highlightButton(correct, true);
+            playWrongSound();
         }
 
         tvScore.setText("Score: " + score);

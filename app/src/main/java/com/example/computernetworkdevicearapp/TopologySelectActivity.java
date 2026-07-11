@@ -16,8 +16,6 @@ public class TopologySelectActivity extends AppCompatActivity {
         findViewById(R.id.cardHome).setOnClickListener(v -> launchAssembly("home"));
         findViewById(R.id.cardOffice).setOnClickListener(v -> launchAssembly("office"));
         findViewById(R.id.cardServerRoom).setOnClickListener(v -> launchAssembly("server_room"));
-        View testCard = findViewById(R.id.cardTest);
-        if (testCard != null) testCard.setOnClickListener(v -> launchAssembly("test_home_switch"));
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
     }
 

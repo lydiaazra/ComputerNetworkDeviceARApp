@@ -10,15 +10,10 @@
         #threeCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
         #uiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;touch-action:none;}
         #status{
-        position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:10;
-        background:rgba(8,14,28,0.85);color:#7EDCFF;font:bold 12px system-ui;
-        padding:6px 16px;border-radius:20px;pointer-events:none;white-space:nowrap;
-        border:1px solid #1F6FEB44;
+        display:none;
         }
         #stepBadgeUI{
-        position:fixed;top:44px;left:50%;transform:translateX(-50%);z-index:10;
-        background:rgba(8,14,28,0.75);color:#8FA5C3;font:bold 11px system-ui;
-        padding:5px 14px;border-radius:14px;pointer-events:none;white-space:nowrap;
+        display:none;
         }
         #deviceBar{
         position:fixed;left:0;right:0;bottom:108px;z-index:10;
@@ -51,10 +46,6 @@
         background:#1F6FEB;border:none;color:#fff;font-size:12px;font-weight:600;
         padding:8px 14px;border-radius:8px;cursor:pointer;flex-shrink:0;
         }
-        #btnSkipDemo{
-        background:#21262D;border:1px solid #30363D;color:#8FA5C3;font-size:11px;font-weight:600;
-        padding:8px 12px;border-radius:8px;cursor:pointer;flex-shrink:0;
-        }
         #btnCalibrate{
         background:#21262D;border:1px solid #7EDCFF;color:#7EDCFF;font-size:13px;font-weight:600;
         padding:6px 10px;border-radius:8px;cursor:pointer;flex-shrink:0;
@@ -83,9 +74,7 @@
         <div class="info-title" id="infoTitle">Network Assembly</div>
         <div class="info-sub" id="infoSub">Loading...</div>
     </div>
-    <button id="btnSkipDemo" onclick="onSkipDemoClicked()" style="display:none;">Skip →</button>
     <button id="btnWatchDemo" onclick="onWatchDemoClicked()" style="display:none;">▶ Demo</button>
-    <button id="btnCalibrate" onclick="onCalibrateToggle()">🎯</button>
     <button id="restartBtn" onclick="onRestartClicked()">Restart ⟳</button>
 </div>
 
@@ -97,6 +86,20 @@
     // Each step: id = unique instance key, type = device category (for icon
     // lookup), glb = model file, label = display name (must be unique within
     // its own topology, since "badge" references the target device by label).
+    const SCENARIOS = {
+    home: 'You\'ve just moved into a new house, and it needs WiFi! Let\'s set up your home network together — tap Demo to watch how it\'s done.',
+    office: 'Congratulations on your first day as the new IT intern! The office network needs to be ready before the team arrives. Tap Demo to see how it\'s done.',
+    server_room: 'New equipment just arrived for the server room, and it\'s on you to get everything online before the systems go live. Tap Demo for a walkthrough.',
+    test_home_switch: 'Let\'s set up a small home network with a router, switch, and a few devices. Tap Demo to see how it\'s done.'
+    };
+
+    const COMPLETION_LINES = {
+    home: 'Your new home has WiFi! Every device is connected and ready to go.',
+    office: 'The office network is live — the team is ready for their first day!',
+    server_room: 'The server room is online and ready to handle production traffic!',
+    test_home_switch: 'Great job — every device is connected. Your network is complete.'
+    };
+
     const TOPOLOGIES = {
 
     home: [
@@ -238,8 +241,9 @@
     const fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
     fill.position.set(-3,0,-2); scene.add(fill);
 
-    // pivot = whole diorama, currently fixed (QR anchor disabled — see below).
+    // pivot = whole diorama, currently fixed..
     const pivot = new THREE.Group();
+    pivot.position.y = 40.0;
     scene.add(pivot);
 
     // Built once the topology is confirmed (see initTopology).
@@ -275,8 +279,11 @@
     let threeReady = false;
     let pendingTopologyId = null;
 
+    let currentTopologyId = 'home';
+
     window.initTopology = function(id){
-    STEPS = TOPOLOGIES[id] || TOPOLOGIES.home;
+    currentTopologyId = TOPOLOGIES[id] ? id : 'home';
+    STEPS = TOPOLOGIES[currentTopologyId];
     stepsDone = STEPS.map(()=>false);
     currentIndex = 0;
     if (threeReady) startFlow();
@@ -288,25 +295,14 @@
     buildDeviceBar();
     document.getElementById('deviceBar').style.display = 'none';
     document.getElementById('btnWatchDemo').style.display = 'inline-block';
-    document.getElementById('btnSkipDemo').style.display = 'inline-block';
-    const line = 'Welcome! Would you like to watch a quick demo of how this network is built, or try it yourself right away?';
-    setInfo('🎬','Watch a demo first?', line);
+    const line = SCENARIOS[currentTopologyId] || SCENARIOS.home;
+    setInfo('🎬','Welcome!', line);
     speak(line);
     }
 
     window.onWatchDemoClicked = function(){
     document.getElementById('btnWatchDemo').style.display = 'none';
-    document.getElementById('btnSkipDemo').style.display = 'none';
     runDemoSequence();
-    };
-
-    window.onSkipDemoClicked = function(){
-    document.getElementById('btnWatchDemo').style.display = 'none';
-    document.getElementById('btnSkipDemo').style.display = 'none';
-    document.getElementById('deviceBar').style.display = 'flex';
-    const first = STEPS[0];
-    setInfo(ICONS[first.type]||'🔌','Get started','Tap '+first.label+' to place it.');
-    speak('Let\'s build your network. Tap '+first.label+' to place it.');
     };
 
     // ─── DEMO MODE — auto-plays the same STEPS sequence, no user input ──────────
@@ -316,7 +312,6 @@
     stepsDone = STEPS.map(()=>false);
     connectFromLocal = null; connectFromDeviceId = null;
     clearAllModels();
-    if (window.AndroidBridge) AndroidBridge.setAvatarVisible(false);
     demoStepLoop();
     }
 
@@ -329,7 +324,7 @@
     const step = STEPS[currentIndex];
     const g = deviceGroups[step.id];
     g.position.copy(step.demoPos);
-    g.rotation.set(0, THREE.MathUtils.degToRad(25), 0);
+    g.rotation.set(0, 0, 0);
 
     if (step.port === null){
     connected = true;
@@ -452,7 +447,7 @@
     userScale = 1; rotY = 0; autoRotate = true;
     if (isDemoMode){
     deviceGroups[step.id].position.copy(step.demoPos);
-    deviceGroups[step.id].rotation.set(0, THREE.MathUtils.degToRad(25), 0);
+    deviceGroups[step.id].rotation.set(0, 0, 0);
     } else {
     deviceGroups[step.id].position.set(0, 0.2, 0.35);
     deviceGroups[step.id].rotation.set(0,0,0);
@@ -543,12 +538,18 @@
     placedModels = {};
     }
 
+    function speakDelay(text){
+    const words = (text||'').split(' ').length;
+    return Math.max(2200, words * 420);
+    }
+
     function onModelLoaded(){
     setStatus('');
     const step = STEPS[currentIndex];
     if (window.AndroidBridge) AndroidBridge.log('step_model_loaded:'+step.id);
-    speak(isDemoMode ? step.demoLine : step.avatarLine);
-    if (isDemoMode) setTimeout(autoCompleteDemoStep, 2600);
+    const line = isDemoMode ? step.demoLine : step.avatarLine;
+    speak(line);
+    if (isDemoMode) setTimeout(autoCompleteDemoStep, speakDelay(line));
     }
 
     function advanceIfDone(){
@@ -791,19 +792,8 @@
     if (isDemoMode){
     isDemoMode = false;
     if (window.AndroidBridge) AndroidBridge.setAvatarVisible(true);
-    clearAllModels();
-    currentIndex = 0;
-    stepsDone = STEPS.map(()=>false);
-    connectFromLocal = null; connectFromDeviceId = null;
-    updateDeviceBarStates();
-    document.getElementById('deviceBar').style.display = 'flex';
-    const first = STEPS[0];
-    const line = 'That\'s how it works! Now it\'s your turn — tap '+first.label+' to build it yourself.';
-    setInfo('🎬','Demo complete!', line);
-    speak(line);
-    return;
     }
-    const line = 'Great job — every device is connected. Your network is complete.';
+    const line = COMPLETION_LINES[currentTopologyId] || COMPLETION_LINES.home;
     setInfo('🎉','Network assembled!', line);
     speak(line);
     document.getElementById('restartBtn').style.display = 'inline-block';
@@ -824,9 +814,8 @@
     clearAllModels();
     updateDeviceBarStates();
     document.getElementById('btnWatchDemo').style.display = 'inline-block';
-    document.getElementById('btnSkipDemo').style.display = 'inline-block';
-    const line = 'Would you like to watch the demo again, or try it yourself?';
-    setInfo('🎬','Watch a demo first?', line);
+    const line = 'Would you like to watch the demo again?';
+    setInfo('🎬','Watch again?', line);
     speak(line);
     };
 
@@ -866,7 +855,12 @@
     (function wait(){
     if (typeof THREE !== 'undefined' && THREE.GLTFLoader){
     threeReady = true;
-    if (pendingTopologyId){ STEPS = TOPOLOGIES[pendingTopologyId]||TOPOLOGIES.home; stepsDone = STEPS.map(()=>false); startFlow(); }
+    if (pendingTopologyId){
+    currentTopologyId = TOPOLOGIES[pendingTopologyId] ? pendingTopologyId : 'home';
+    STEPS = TOPOLOGIES[currentTopologyId];
+    stepsDone = STEPS.map(()=>false);
+    startFlow();
+    }
     } else if (t++ < 30){ setTimeout(wait,200);
     } else { setStatus('Failed to load Three.js'); }
     })();

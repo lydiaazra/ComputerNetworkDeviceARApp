@@ -48,10 +48,11 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
     private WebView        modelWebView;
     private WebView        avatarWebView;
     private TextView       tvDeviceTitle, tvStatusIcon, tvStatusTitle, tvStatusSub;
-    private MaterialButton btnBack, btnDemoMode;
+    private MaterialButton btnBack;
     private View           statusBar;
 
     private String glbBase64 = null;
+    private String deviceType = "switch";
 
     private String avatarBase64  = null;
     private String threeJs       = null;
@@ -65,12 +66,17 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_device_flow_ar);
 
+        String type = getIntent().getStringExtra("deviceType");
+        if (type != null) deviceType = type;
+
         bindViews();
         setupNavBarInsets();
         setupModelWebView();
         setupAvatarWebView();
         setupTTS();
         setupButtons();
+
+        tvDeviceTitle.setText(titleForDeviceType(deviceType));
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -111,8 +117,24 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         tvStatusTitle  = findViewById(R.id.tvStatusTitle);
         tvStatusSub    = findViewById(R.id.tvStatusSub);
         btnBack        = findViewById(R.id.btnBack);
-        btnDemoMode    = findViewById(R.id.btnDemoMode);
         statusBar      = findViewById(R.id.statusBar);
+    }
+
+    private String titleForDeviceType(String type) {
+        switch (type) {
+            case "hub":      return "Hub";
+            case "router":   return "Router";
+            case "firewall": return "Firewall";
+            case "repeater": return "Repeater";
+            case "gateway":  return "Gateway";
+            case "wap":      return "WAP";
+            case "server":   return "Server";
+            case "full_network": return "Full Network";
+            case "home_network": return "Home Network";
+            case "office_network": return "Office Network";
+            case "server_room_network": return "Server Room Network";
+            default:         return "Switch";
+        }
     }
 
     private void setupNavBarInsets() {
@@ -154,8 +176,43 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         modelWebView.addJavascriptInterface(new FlowBridge(), "AndroidBridge");
-        modelWebView.setWebViewClient(new WebViewClient());
-        modelWebView.loadUrl("file:///android_asset/assets/device_flow_demo.html");
+        modelWebView.setWebChromeClient(new android.webkit.WebChromeClient() {
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message,
+                                     android.webkit.JsResult result) {
+                new androidx.appcompat.app.AlertDialog.Builder(DeviceFlowDemoActivity.this)
+                        .setMessage(message)
+                        .setPositiveButton("OK", (d, w) -> result.confirm())
+                        .setOnCancelListener(d -> result.confirm())
+                        .setCancelable(false)
+                        .show();
+                return true;
+            }
+        });
+        modelWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (!url.startsWith("file:")) return;
+                view.evaluateJavascript(
+                        "setTimeout(function(){ if(window.initDeviceType) initDeviceType('" + deviceType + "'); }, 200);",
+                        null);
+            }
+        });
+        String htmlFile;
+        if ("switch".equals(deviceType)) htmlFile = "switch_flow_ar.html";
+        else if ("hub".equals(deviceType)) htmlFile = "hub_flow_ar.html";
+        else if ("router".equals(deviceType)) htmlFile = "router_flow_ar.html";
+        else if ("firewall".equals(deviceType)) htmlFile = "firewall_flow_ar.html";
+        else if ("repeater".equals(deviceType)) htmlFile = "repeater_flow_ar.html";
+        else if ("gateway".equals(deviceType)) htmlFile = "gateway_flow_ar.html";
+        else if ("wap".equals(deviceType)) htmlFile = "wap_flow_ar.html";
+        else if ("server".equals(deviceType)) htmlFile = "server_flow_ar.html";
+        else if ("full_network".equals(deviceType)) htmlFile = "full_network_flow_ar.html";
+        else if ("home_network".equals(deviceType)) htmlFile = "home_network_flow_ar.html";
+        else if ("office_network".equals(deviceType)) htmlFile = "office_network_flow_ar.html";
+        else if ("server_room_network".equals(deviceType)) htmlFile = "server_room_flow_ar.html";
+        else htmlFile = "device_build_flow_ar.html";
+        modelWebView.loadUrl("file:///android_asset/assets/" + htmlFile);
     }
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -163,6 +220,15 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         avatarBase64 = readAssetAsBase64("models/avatar.glb");
         threeJs      = readAssetAsString("assets/three.min.js");
         gltfLoaderJs = readAssetAsString("assets/GLTFLoader.js");
+
+        if ("switch".equals(deviceType) || "hub".equals(deviceType)) {
+            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams lp =
+                    (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) avatarWebView.getLayoutParams();
+            lp.endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET;
+            lp.startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID;
+            lp.setMarginEnd(0);
+            lp.setMarginStart(0);
+            avatarWebView.setLayoutParams(lp);}
 
         avatarWebView.setBackgroundColor(Color.TRANSPARENT);
         avatarWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
@@ -205,6 +271,8 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         tts = new TextToSpeech(this, this);
     }
 
+    private String pendingSpeech = null;
+
     @Override
     public void onInit(int status) {
         if (status == TextToSpeech.SUCCESS) {
@@ -220,13 +288,15 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
                     runOnUiThread(() -> avatarWebView.evaluateJavascript("stopTalking()", null));
                 }
             });
+            if (ttsReady && pendingSpeech != null) {
+                tts.speak(pendingSpeech, TextToSpeech.QUEUE_FLUSH, null, "flow_line");
+                pendingSpeech = null;
+            }
         }
     }
 
     private void setupButtons() {
         btnBack.setOnClickListener(v -> finish());
-        btnDemoMode.setOnClickListener(v ->
-                modelWebView.evaluateJavascript("onDemoModeToggle();", null));
     }
 
     private class FlowBridge {
@@ -258,6 +328,7 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
             runOnUiThread(() -> {
                 avatarWebView.evaluateJavascript("startTalking()", null);
                 if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "flow_line");
+                else pendingSpeech = text;
             });
         }
 
@@ -279,7 +350,6 @@ public class DeviceFlowDemoActivity extends AppCompatActivity
         public void log(String m) { Log.d(TAG, "JS: " + m); }
     }
 
-    // Avatar HTML — identical lip-sync/gesture logic reused across the app.
     private String buildAvatarHtml() {
         String threeScript = threeJs != null
                 ? "<script>" + threeJs + "</script>"

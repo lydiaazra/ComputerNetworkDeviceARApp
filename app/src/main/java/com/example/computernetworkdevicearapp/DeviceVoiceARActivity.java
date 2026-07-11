@@ -144,6 +144,7 @@ public class DeviceVoiceARActivity extends AppCompatActivity
         if (name.contains("repeat"))                                               return "repeater.glb";
         if (name.contains("gateway"))                                              return "gateway.glb";
         if (name.contains("modem"))                                                return "modem.glb";
+        if (name.contains("server"))                                               return "server.glb";
         if (name.contains("router"))                                               return "router.glb";
         return "router.glb";
     }
@@ -176,7 +177,13 @@ public class DeviceVoiceARActivity extends AppCompatActivity
                 }
             }
             isGlbReady = true;
-            runOnUiThread(this::tryLoadModel);
+            String result = glbBase64 != null
+                    ? "✅ loaded " + file + " (" + (glbBase64.length()/1024) + "KB)"
+                    : "❌ FAILED to find " + file + " in any path — using placeholder";
+            runOnUiThread(() -> {
+                Toast.makeText(this, "DEBUG: " + result, Toast.LENGTH_LONG).show();
+                tryLoadModel();
+            });
         }).start();
     }
 
@@ -251,6 +258,12 @@ public class DeviceVoiceARActivity extends AppCompatActivity
             whatItDoes   = "Modulates and demodulates signals to enable data transmission over telephone, cable, or fibre connections.";
             howItWorks   = "Converts digital data to analogue signals. Converts incoming analogue signals back to digital. Connects your local network to the ISP. Often combined with a router in home devices.";
             whyItMatters = "The link between your local network and the internet — without it, no external connectivity is possible.";
+
+        } else if (name.contains("server")) {
+            deviceName   = "Server";
+            whatItDoes   = "A powerful computer that stores data and responds to requests from other devices on the network.";
+            howItWorks   = "Waits for incoming requests from client devices. Processes each request — for example, looking up a webpage or file. Sends the response back to the requesting device. Can serve many clients at once.";
+            whyItMatters = "Servers power almost everything you use online — every website, app, and file you access is stored and delivered by a server somewhere.";
 
         } else {
             deviceName   = "Router";

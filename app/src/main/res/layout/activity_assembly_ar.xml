@@ -31,11 +31,11 @@
     <!-- Avatar WebView — bigger, corner overlay, above the device bar + info bar -->
     <WebView
         android:id="@+id/avatarWebView"
-        android:layout_width="170dp"
-        android:layout_height="230dp"
+        android:layout_width="260dp"
+        android:layout_height="350dp"
         android:background="@android:color/transparent"
-        android:layout_marginStart="6dp"
-        android:layout_marginBottom="195dp"
+        android:layout_marginStart="0dp"
+        android:layout_marginBottom="150dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 

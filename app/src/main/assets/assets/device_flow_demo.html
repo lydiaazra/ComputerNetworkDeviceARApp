@@ -17,20 +17,129 @@
 <script src="three.min.js"></script>
 <script src="GLTFLoader.js"></script>
 <script>
-    // ─── TOPOLOGY — matches the reference: Switch centre, 5 PCs around it ───────
-    const NODES = {
-    switch: { glb:'switch.glb', label:'Switch', pos:new THREE.Vector3(0, 0, 0), isHub:true },
-    pcA: { glb:'pc.glb', label:'PC A', pos:new THREE.Vector3(0, 1.05, 0) },
-    pcE: { glb:'pc.glb', label:'PC E', pos:new THREE.Vector3(-1.05, 0.35, 0) },
-    pcB: { glb:'pc.glb', label:'PC B', pos:new THREE.Vector3(1.05, 0.35, 0) },
-    pcD: { glb:'pc.glb', label:'PC D', pos:new THREE.Vector3(-0.65, -0.95, 0) },
-    pcC: { glb:'pc.glb', label:'PC C', pos:new THREE.Vector3(0.65, -0.95, 0) },
-    };
-    const PC_IDS = ['pcA','pcE','pcB','pcD','pcC'];
+    // ─── SCENARIOS ────────────────────────────────────────────────────────────────
+    // mode: 'selective' | 'broadcast' | 'single'
+    // 'selective' + blockedIds  -> Firewall-style rule rejection
+    // 'single' + roundtrip:true -> Server-style request/response
+    const SCENARIOS = {
 
-    let isDemoMode = false;
-    let selectingSource = null; // id of source PC while awaiting a destination tap in Try Mode
-    let blockedIds = [];        // PCs not involved in the current frame — shown "Blocked"
+    switch: {
+    centerGlb:'switch.glb', centerLabel:'Switch', mode:'selective',
+    nodes: [
+    {id:'n1', glb:'pc.glb', label:'PC A', pos:[0,1.05,0]},
+    {id:'n2', glb:'pc.glb', label:'PC E', pos:[-1.05,0.35,0]},
+    {id:'n3', glb:'laptop.glb', label:'Laptop B', pos:[1.05,0.35,0]},
+    {id:'n4', glb:'pc.glb', label:'PC D', pos:[-0.65,-0.95,0]},
+    {id:'n5', glb:'pc.glb', label:'PC C', pos:[0.65,-0.95,0]},
+    ],
+    intro:'This is a Switch. Tap a PC to send data — pick a source, then a destination.',
+    demoSrc:'n1', demoDest:'n2',
+    demoLine:'The Switch knows exactly where PC E is, so it delivers the frame directly — not to everyone.',
+    afterLine:'Unlike a Hub, which broadcasts to every device, the Switch only sends to the device that needs it — reducing unnecessary network traffic.'
+    },
+
+    hub: {
+    centerGlb:'hub.glb', centerLabel:'Hub', mode:'broadcast',
+    nodes: [
+    {id:'n1', glb:'pc.glb', label:'PC A', pos:[0,1.05,0]},
+    {id:'n2', glb:'pc.glb', label:'PC E', pos:[-1.05,0.35,0]},
+    {id:'n3', glb:'laptop.glb', label:'Laptop B', pos:[1.05,0.35,0]},
+    {id:'n4', glb:'pc.glb', label:'PC D', pos:[-0.65,-0.95,0]},
+    {id:'n5', glb:'pc.glb', label:'PC C', pos:[0.65,-0.95,0]},
+    ],
+    intro:'This is a Hub. Tap any PC to send data — watch it reach every device.',
+    demoSrc:'n1',
+    demoLine:'The Hub doesn\'t check where data should go — it broadcasts to every device connected to it.',
+    afterLine:'This creates more network traffic than necessary, which is why Switches replaced Hubs in most networks.'
+    },
+
+    router: {
+    centerGlb:'router.glb', centerLabel:'Router', mode:'selective',
+    nodes: [
+    {id:'n1', glb:'modem.glb', label:'Modem', pos:[0,1.05,0]},
+    {id:'n2', glb:'switch.glb', label:'Switch', pos:[-1.05,0.35,0]},
+    {id:'n3', glb:'wap.glb', label:'WAP', pos:[1.05,0.35,0]},
+    {id:'n4', glb:'pc.glb', label:'PC', pos:[0,-0.95,0]},
+    ],
+    intro:'This is a Router. Tap the Modem, then tap another device to route data between your network and the Internet.',
+    demoSrc:'n1', demoDest:'n4',
+    demoLine:'The Router reads the destination IP address and forwards data from the Internet to the correct device on your network.',
+    afterLine:'Routers connect your entire local network to the Internet — this is how every device in your home gets online.'
+    },
+    // NOTE: Router is no longer used from here — it now has its own
+    // dedicated file (router_flow_ar.html) with the drag-to-place +
+    // connect + simulate flow. This entry is kept only as an unused
+    // fallback in case AndroidBridge routing ever falls through to it.
+
+    firewall: {
+    centerGlb:'firewall.glb', centerLabel:'Firewall', mode:'selective',
+    blockedIds:['n4','n5'],
+    nodes: [
+    {id:'n1', glb:'pc.glb', label:'Internal LAN PC', pos:[0,1.05,0]},
+    {id:'n2', glb:'server.glb', label:'Allowed Website', pos:[-1.05,0.35,0]},
+    {id:'n3', glb:'server.glb', label:'Allowed Website', pos:[1.05,0.35,0]},
+    {id:'n4', glb:'server.glb', label:'Blocked Website', pos:[-0.65,-0.95,0]},
+    {id:'n5', glb:'server.glb', label:'Blocked Website', pos:[0.65,-0.95,0]},
+    ],
+    intro:'This is a Firewall. Tap your PC, then tap a website on the Internet to see if it\'s allowed through.',
+    demoSrc:'n1', demoDest:'n4',
+    demoLine:'The Firewall checks this request against its security rules...',
+    blockedLine:'This website is blocked by the Firewall\'s rules — the connection is rejected.',
+    afterLine:'Firewalls sit between your internal network and the Internet, protecting your LAN by filtering traffic based on rules you define.'
+    },
+
+    repeater: {
+    centerGlb:'repeater.glb', centerLabel:'Repeater', mode:'single',
+    nodes: [
+    {id:'src', glb:'pc.glb', label:'Source', pos:[-1.0,0,0]},
+    {id:'dest', glb:'pc.glb', label:'Destination', pos:[1.0,0,0]},
+    ],
+    intro:'This is a Repeater. Tap it to see how it boosts a weak signal.',
+    demoSrc:'src', demoDest:'dest',
+    demoLine:'The signal weakens as it travels — the Repeater regenerates it...',
+    afterLine:'This lets the signal travel much further than it could on its own.'
+    },
+
+    gateway: {
+    centerGlb:'gateway.glb', centerLabel:'Gateway', mode:'single',
+    nodes: [
+    {id:'src', glb:'pc.glb', label:'LAN Network', pos:[-1.0,0,0]},
+    {id:'dest', glb:'server.glb', label:'Internet / WAN', pos:[1.0,0,0]},
+    ],
+    intro:'This is a Gateway. Tap it to see how it translates between your LAN and the Internet.',
+    demoSrc:'src', demoDest:'dest',
+    demoLine:'The Gateway translates the data format so your local network and the Internet can understand each other.',
+    afterLine:'Without a Gateway, your LAN and the wider Internet couldn\'t communicate directly — different networks often use different protocols.'
+    },
+
+    wap: {
+    centerGlb:'wap.glb', centerLabel:'WAP', mode:'single',
+    nodes: [
+    {id:'src', glb:'laptop.glb', label:'Wireless Laptop', pos:[-1.0,0,0]},
+    {id:'dest', glb:'pc.glb', label:'Wired Network', pos:[1.0,0,0]},
+    ],
+    intro:'This is a Wireless Access Point. Tap it to see how it bridges WiFi to the wired network.',
+    demoSrc:'src', demoDest:'dest',
+    demoLine:'The WAP receives the wireless signal and bridges it onto the wired network.',
+    afterLine:'This is how your phone or laptop connects to the Internet without a cable.'
+    },
+
+    server: {
+    centerGlb:'server.glb', centerLabel:'Server', mode:'single', roundtrip:true,
+    nodes: [
+    {id:'src', glb:'pc.glb', label:'Client PC', pos:[0,-1.0,0]},
+    ],
+    intro:'This is a Server. Tap the PC to send a request and watch the response come back.',
+    demoSrc:'src',
+    demoLine:'The PC sends a request to the Server...',
+    processLine:'The Server processes the request...',
+    afterLine:'The Server then sends the response back — this request-response cycle happens every time you load a webpage.'
+    },
+
+    };
+
+    let scenario = SCENARIOS.switch;
+    let awaitingSource = true;
 
     const threeCanvas = document.getElementById('threeCanvas');
     const renderer = new THREE.WebGLRenderer({canvas:threeCanvas,antialias:true,alpha:true});
@@ -53,29 +162,49 @@
     pivot.position.y = 0.55;
     scene.add(pivot);
 
-    const nodeGroups = {};
-    const nodeModels = {};
-    const cableCurves = {};   // id -> QuadraticBezierCurve3 (node <-> switch)
-    const cableMeshes = {};
-    let loadedCount = 0;
+    let nodeGroups = {};
+    let nodeModels = {};
+    let cableCurves = {};
+    let cableMeshes = {};
 
-    Object.keys(NODES).forEach(id=>{
+    // ─── LOADING ──────────────────────────────────────────────────────────────────
+    let loadQueue = [];
+    let currentLoadingId = null;
+
+    function buildTopology(){
+    // clear any previous scenario's objects
+    Object.values(nodeGroups).forEach(g=>pivot.remove(g));
+    nodeGroups = {}; nodeModels = {}; cableCurves = {}; cableMeshes = {};
+
+    const centerPos = new THREE.Vector3(0,0,0);
+    const centerGroup = new THREE.Group();
+    centerGroup.position.copy(centerPos);
+    pivot.add(centerGroup);
+    nodeGroups['__center__'] = centerGroup;
+
+    scenario.nodes.forEach(n=>{
     const g = new THREE.Group();
-    g.position.copy(NODES[id].pos);
+    g.position.set(n.pos[0], n.pos[1], n.pos[2]);
     pivot.add(g);
-    nodeGroups[id] = g;
+    nodeGroups[n.id] = g;
     });
 
-    // ─── LOADING — one GLB request at a time via the Android bridge ─────────────
-    let loadQueue = Object.keys(NODES).slice();
+    loadQueue = ['__center__'].concat(scenario.nodes.map(n=>n.id));
+    loadNext();
+    }
+
+    function glbForId(id){
+    return id === '__center__' ? scenario.centerGlb
+         : scenario.nodes.find(n=>n.id===id).glb;
+    }
+
     function loadNext(){
     if (loadQueue.length === 0) { onAllLoaded(); return; }
     const id = loadQueue.shift();
     currentLoadingId = id;
-    if (window.AndroidBridge) AndroidBridge.requestGlb(NODES[id].glb);
+    if (window.AndroidBridge) AndroidBridge.requestGlb(glbForId(id));
     else { buildPlaceholder(id); loadNext(); }
     }
-    let currentLoadingId = null;
 
     window.onGlbReady = function(){
     const total = AndroidBridge.getGlbLength();
@@ -106,7 +235,7 @@
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
     const ctr = box.getCenter(new THREE.Vector3());
-    const target = NODES[id].isHub ? 1.05 : 0.28;
+    const target = id === '__center__' ? 1.05 : 0.28;
     const sc = target / Math.max(size.x, size.y, size.z);
     model.scale.setScalar(sc);
     model.position.sub(ctr.multiplyScalar(sc));
@@ -115,28 +244,28 @@
     }
 
     function buildPlaceholder(id){
-    const isHub = NODES[id].isHub;
-    const geo = isHub ? new THREE.BoxGeometry(1.1,0.42,0.6) : new THREE.BoxGeometry(0.24,0.15,0.17);
-    const mat = new THREE.MeshStandardMaterial({color: isHub?0x2A6B20:0x4A6AE0});
+    const isCenter = id === '__center__';
+    const geo = isCenter ? new THREE.BoxGeometry(1.1,0.42,0.6) : new THREE.BoxGeometry(0.24,0.15,0.17);
+    const mat = new THREE.MeshStandardMaterial({color: isCenter?0x2A6B20:0x4A6AE0});
     const mesh = new THREE.Mesh(geo, mat);
     nodeGroups[id].add(mesh);
     nodeModels[id] = mesh;
     }
 
-    // ─── CABLES — drawn once, all nodes already connected (this is a behaviour
-    // demo, not an assembly exercise) ─────────────────────────────────────────
+    // ─── CABLES ───────────────────────────────────────────────────────────────────
     function buildCables(){
-    PC_IDS.forEach(id=>{
-    const a = NODES[id].pos, b = NODES.switch.pos;
+    scenario.nodes.forEach(n=>{
+    const a = new THREE.Vector3(n.pos[0], n.pos[1], n.pos[2]);
+    const b = new THREE.Vector3(0,0,0);
     const mid = a.clone().add(b).multiplyScalar(0.5);
     mid.y -= 0.05;
     const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-    cableCurves[id] = curve;
+    cableCurves[n.id] = curve;
     const geo = new THREE.TubeGeometry(curve, 16, 0.010, 8, false);
     const mat = new THREE.MeshStandardMaterial({color:0x3A4656, roughness:0.6});
     const tube = new THREE.Mesh(geo, mat);
     pivot.add(tube);
-    cableMeshes[id] = tube;
+    cableMeshes[n.id] = tube;
     });
     }
 
@@ -146,14 +275,26 @@
     mesh.material.color.set(blocked ? 0x8A2A2A : (active ? 0x3EC26E : 0x3A4656));
     }
     function resetCables(){
-    PC_IDS.forEach(id=>setCableActive(id, false, false));
+    scenario.nodes.forEach(n=>setCableActive(n.id, false, false));
     }
 
     function onAllLoaded(){
     buildCables();
+    resetInteractionState();
     if (window.AndroidBridge) AndroidBridge.onSceneReady();
-    setStatus('🔀','Tap a PC to send data','Choose a source device, then a destination.');
-    speak('This is a Switch. Tap a PC to send data — pick a source, then a destination.');
+    setStatus(iconFor(scenario), scenario.centerLabel, scenario.intro);
+    speak(scenario.intro);
+    }
+
+    function iconFor(s){
+    if (s === SCENARIOS.hub) return '📡';
+    if (s === SCENARIOS.router) return '🔌';
+    if (s === SCENARIOS.firewall) return '🛡️';
+    if (s === SCENARIOS.repeater) return '🔁';
+    if (s === SCENARIOS.gateway) return '🌐';
+    if (s === SCENARIOS.wap) return '📶';
+    if (s === SCENARIOS.server) return '🗄️';
+    return '🔀';
     }
 
     function speak(text){
@@ -191,50 +332,140 @@
     requestAnimationFrame(step);
     }
 
-    // ─── SEND A FRAME — source PC to destination PC, via the Switch ─────────────
-    function sendFrame(sourceId, destId, spoken){
-    blockedIds = PC_IDS.filter(id => id !== sourceId && id !== destId);
+    function labelOf(id){
+    if (id === '__center__') return scenario.centerLabel;
+    const n = scenario.nodes.find(x=>x.id===id);
+    return n ? n.label : id;
+    }
+
+    // ─── SELECTIVE MODE — pick source, then destination ─────────────────────────
+    function sendSelective(sourceId, destId, isDemo){
+    const blocked = (scenario.blockedIds||[]).includes(destId);
+    const others = scenario.nodes.map(n=>n.id).filter(id=>id!==sourceId && id!==destId);
     resetCables();
     setCableActive(sourceId, true, false);
-    blockedIds.forEach(id => setCableActive(id, false, true));
+    others.forEach(id=>setCableActive(id, false, true));
 
-    setStatus('📤', NODES[sourceId].label+' → Switch', 'Sending frame to the Switch...');
+    setStatus(iconFor(scenario), labelOf(sourceId)+' → '+scenario.centerLabel, 'Sending data...');
     animateAlongCurve(cableCurves[sourceId], false, 900, ()=>{
+    if (blocked){
+    setCableActive(destId, false, true);
+    setStatus('🚫','Blocked!', scenario.blockedLine || (labelOf(destId)+' is blocked.'));
+    if (isDemo) speak(scenario.blockedLine || 'This destination is blocked.');
+    if (isDemo) setTimeout(onDemoFinished, 1600);
+    else resetInteractionState();
+    return;
+    }
     setCableActive(destId, true, false);
-    setStatus('🔀', 'Switch forwards it', NODES[sourceId].label+' → Switch → '+NODES[destId].label+' only.');
-    if (spoken) speak(spoken);
+    const midLine = scenario.demoLine;
+    setStatus(iconFor(scenario), scenario.centerLabel+' forwards it', labelOf(sourceId)+' → '+scenario.centerLabel+' → '+labelOf(destId)+' only.');
+    if (isDemo && midLine) speak(midLine);
     animateAlongCurve(cableCurves[destId], true, 900, ()=>{
-    const blockedNames = blockedIds.map(id=>NODES[id].label).join(', ');
-    setStatus('✅', 'Delivered!', NODES[sourceId].label+' → Switch → '+NODES[destId].label+' only. '+blockedNames+' blocked.');
-    if (isDemoMode) setTimeout(onDemoStepDone, 1400);
+    const blockedNames = others.map(labelOf).join(', ');
+    setStatus('✅','Delivered!', labelOf(sourceId)+' → '+scenario.centerLabel+' → '+labelOf(destId)+' only.'+(others.length?(' '+blockedNames+' blocked.'):''));
+    if (isDemo) setTimeout(onDemoFinished, 1400);
+    else resetInteractionState();
     });
     });
     }
 
-    // ─── DEMO MODE — autoplay, matches the reference exactly ────────────────────
+    // ─── BROADCAST MODE — one tap, reaches everyone ─────────────────────────────
+    function sendBroadcast(sourceId, isDemo){
+    const others = scenario.nodes.map(n=>n.id).filter(id=>id!==sourceId);
+    resetCables();
+    setCableActive(sourceId, true, false);
+    setStatus(iconFor(scenario), labelOf(sourceId)+' → '+scenario.centerLabel, 'Sending data...');
+    animateAlongCurve(cableCurves[sourceId], false, 900, ()=>{
+    if (isDemo && scenario.demoLine) speak(scenario.demoLine);
+    setStatus(iconFor(scenario), scenario.centerLabel+' broadcasts it', 'Sending to every connected device...');
+    let done = 0;
+    others.forEach(id=>{
+    setCableActive(id, true, false);
+    animateAlongCurve(cableCurves[id], true, 900, ()=>{
+    done++;
+    if (done === others.length){
+    setStatus('✅','Delivered to everyone!', labelOf(sourceId)+' → '+scenario.centerLabel+' → all '+others.length+' devices.');
+    if (isDemo) setTimeout(onDemoFinished, 1400);
+    else resetInteractionState();
+    }
+    });
+    });
+    });
+    }
+
+    // ─── SINGLE MODE — one fixed concept (boost / translate / bridge / roundtrip) ──
+    function sendSingle(isDemo){
+    const src = scenario.demoSrc, dest = scenario.demoDest;
+    resetCables();
+    setCableActive(src, true, false);
+    setStatus(iconFor(scenario), labelOf(src)+' → '+scenario.centerLabel, 'Sending data...');
+    animateAlongCurve(cableCurves[src], false, 900, ()=>{
+    if (isDemo && scenario.demoLine) speak(scenario.demoLine);
+    setStatus(iconFor(scenario), scenario.centerLabel, scenario.demoLine || '');
+
+    if (scenario.roundtrip){
+    setTimeout(()=>{
+    if (isDemo && scenario.processLine) speak(scenario.processLine);
+    setStatus(iconFor(scenario), 'Processing...', scenario.processLine || '');
+    setTimeout(()=>{
+    setCableActive(src, true, false);
+    animateAlongCurve(cableCurves[src], false, 900, ()=>{
+    setStatus('✅','Response delivered!', scenario.centerLabel+' → '+labelOf(src));
+    if (isDemo) setTimeout(onDemoFinished, 1400);
+    else resetInteractionState();
+    });
+    }, 900);
+    }, 500);
+    return;
+    }
+
+    if (!dest){
+    setStatus('✅','Done!', scenario.demoLine || '');
+    if (isDemo) setTimeout(onDemoFinished, 1400);
+    else resetInteractionState();
+    return;
+    }
+
+    setCableActive(dest, true, false);
+    animateAlongCurve(cableCurves[dest], true, 900, ()=>{
+    setStatus('✅','Delivered!', labelOf(src)+' → '+scenario.centerLabel+' → '+labelOf(dest)+'.');
+    if (isDemo) setTimeout(onDemoFinished, 1400);
+    else resetInteractionState();
+    });
+    });
+    }
+
+    // ─── DEMO MODE ────────────────────────────────────────────────────────────────
+    let isDemoMode = false;
     window.onDemoModeToggle = function(){
     if (isDemoMode) return;
     isDemoMode = true;
-    selectingSource = null;
     resetCables();
-    speak('Watch what happens when PC A sends data to PC E.');
-    setStatus('🎬','Demo','PC A wants to send data to PC E.');
+    setStatus('🎬','Demo', 'Watch how '+scenario.centerLabel+' handles data.');
     setTimeout(()=>{
-    sendFrame('pcA','pcE','The Switch knows exactly where PC E is, so it delivers the frame directly — not to everyone.');
-    }, 1600);
+    if (scenario.mode === 'broadcast') sendBroadcast(scenario.demoSrc, true);
+    else sendSelective(scenario.demoSrc, scenario.demoDest, true);
+    if (scenario.mode === 'single') sendSingle(true);
+    }, 1400);
     };
 
-    function onDemoStepDone(){
-    speak('Unlike a Hub, which would broadcast to every device, the Switch only sends to the device that needs it — reducing unnecessary traffic on the network.');
+    function onDemoFinished(){
+    if (scenario.afterLine) speak(scenario.afterLine);
     setTimeout(()=>{
     isDemoMode = false;
     resetCables();
-    setStatus('🔀','Now you try','Tap a PC to send data — pick a source, then a destination.');
-    speak('Now it\'s your turn. Tap a source PC, then a destination.');
+    resetInteractionState();
+    setStatus(iconFor(scenario), 'Now you try', scenario.intro);
+    speak('Now it\'s your turn. ' + scenario.intro);
     }, 3200);
     }
 
-    // ─── TRY MODE — tap source, then destination ─────────────────────────────────
+    function resetInteractionState(){
+    awaitingSource = true;
+    window.__selectedSource = null;
+    }
+
+    // ─── TRY MODE — tap-based interaction ────────────────────────────────────────
     const raycaster = new THREE.Raycaster();
     function raycastHit(xPix, yPix){
     const mouse = new THREE.Vector2((xPix/uiCanvas.width)*2-1, -(yPix/uiCanvas.height)*2+1);
@@ -263,26 +494,38 @@
 
     uiCanvas.addEventListener('touchend', e=>{
     e.preventDefault();
+
     if (isDemoMode) return;
     const {x,y} = cp(e);
     const hit = raycastHit(x,y);
     if (!hit) return;
     const id = nodeIdForObject(hit.object);
-    if (!id || id === 'switch') return;
+    if (!id || id === '__center__') return;
 
-    if (!selectingSource){
-    selectingSource = id;
-    resetCables();
-    setCableActive(id, true, false);
-    setStatus('👆', NODES[id].label+' selected', 'Now tap the destination PC.');
-    speak(NODES[id].label+' selected. Now tap the destination.');
+    if (scenario.mode === 'single'){
+    sendSingle(false);
     return;
     }
-    if (id === selectingSource){ return; }
 
-    const src = selectingSource;
-    selectingSource = null;
-    sendFrame(src, id, null);
+    if (scenario.mode === 'broadcast'){
+    sendBroadcast(id, false);
+    return;
+    }
+
+    // selective
+    if (awaitingSource){
+    window.__selectedSource = id;
+    awaitingSource = false;
+    resetCables();
+    setCableActive(id, true, false);
+    setStatus('👆', labelOf(id)+' selected', 'Now tap the destination.');
+    speak(labelOf(id)+' selected. Now tap the destination.');
+    return;
+    }
+    if (id === window.__selectedSource) return;
+    const src = window.__selectedSource;
+    awaitingSource = true;
+    sendSelective(src, id, false);
     }, {passive:false});
 
     // ─── RENDER LOOP ──────────────────────────────────────────────────────────────
@@ -298,14 +541,16 @@
     uiCanvas.width = innerWidth; uiCanvas.height = innerHeight;
     });
 
-    window.addEventListener('load', function(){
-    var t = 0;
-    (function wait(){
+    // ─── ENTRY POINT — Android calls this once, right after page load ───────────
+    window.initDeviceType = function(deviceType){
+    var attempts = 0;
+    (function tryInit(){
     if (typeof THREE !== 'undefined' && THREE.GLTFLoader){
-    loadNext();
-    } else if (t++ < 30){ setTimeout(wait,200); }
+    scenario = SCENARIOS[deviceType] || SCENARIOS.switch;
+    buildTopology();
+    } else if (attempts++ < 30){ setTimeout(tryInit, 200); }
     })();
-    });
+    };
 </script>
 </body>
 </html>

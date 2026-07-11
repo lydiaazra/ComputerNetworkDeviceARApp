@@ -52,8 +52,7 @@
 
         <activity
             android:name=".CameraARActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false" />
 
         <activity
             android:name=".DeviceSelectActivity"
@@ -61,22 +60,15 @@
 
         <activity
             android:name=".NetworkLabActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"/>
+            android:exported="false" />
 
         <activity
             android:name=".DeviceDemoSelectActivity"
             android:exported="false"/>
 
         <activity
-            android:name=".CableARActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-
-        <activity
             android:name=".AssemblyARActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <activity
             android:name=".TopologySelectActivity"
@@ -87,6 +79,9 @@
             android:exported="false" />
 
         <activity android:name=".DeviceFlowDemoActivity"
+                  android:exported="false"  />
+
+        <activity android:name=".DeviceFlowSelectActivity"
                   android:exported="false"  />
 
     </application>

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent;}
+        html,body{width:100%;height:100%;overflow:hidden;background:transparent;}
+        #threeCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+        #uiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;touch-action:none;}
+        #deviceBar{
+        position:fixed;left:0;right:0;top:80px;z-index:3;
+        background:rgba(13,17,23,0.92);border-bottom:1px solid #21262D;
+        display:none;justify-content:space-between;align-items:center;
+        padding:8px 8px;gap:5px;
+        }
+        .devBtn{
+        flex:1 0 auto;min-width:50px;
+        background:#1A1F2B;border:1px solid #30363D;color:#586071;
+        font:bold 9px system-ui;padding:8px 2px;border-radius:8px;
+        text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        }
+        .devBtn.active{background:#1F6FEB33;border-color:#1F6FEB;color:#7EDCFF;}
+        .devBtn.done{background:#3EC26E22;border-color:#3EC26E;color:#3EC26E;}
+    </style>
+</head>
+<body>
+<canvas id="threeCanvas"></canvas>
+<canvas id="uiCanvas"></canvas>
+<div id="deviceBar"></div>
+
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+<script>
+    // ─── SERVER — single Client PC, roundtrip request/response ──────────────────
+    const CENTER = { glb:'server.glb', label:'Server' };
+    const CENTER_PLACED_LINE = 'Server placed. A Server waits for requests from other devices and sends back a response — this happens every time you load a webpage.';
+    const SECONDARY = [
+    { id:'client', glb:'pc.glb', label:'Client PC', promptLine:'Now tap Client PC to finish — the device that will send a request.', connectLine:'This is a Client PC, about to send a request to the Server.', pos:[0,-1.0,0] },
+    { id:'client2', glb:'pc.glb', label:'Client PC 2', promptLine:'Now tap Client PC 2 to add another client.', connectLine:'This is Client PC 2, another device that can request data from the Server.', pos:[-1.0,-0.7,0] },
+    { id:'client3', glb:'pc.glb', label:'Client PC 3', promptLine:'Last one — now tap Client PC 3 to finish.', connectLine:'This is Client PC 3 — Servers are built to handle many clients at once.', pos:[1.0,-0.7,0] }, ];
+    const INTRO_LINE = 'Hi, this is a Try Mode for Server. A Server responds to requests from other devices on the network. Let\'s build a network together. Tap Server to place it.';
+    const READY_LINE = 'Connection successful! Let\'s see the Server in action.';
+    const DEMO_INTRO_LINE = 'The Client PC sends a request to the Server — like asking to load a webpage.';
+    const DEMO_PROCESS_LINE = 'The Server processes the request...';
+    const DEMO_DONE_LINE = 'Delivered! The Server sends the response back to the Client PC. This request-response cycle happens every single time you load a webpage, watch a video, or open an app.';
+
+    const threeCanvas = document.getElementById('threeCanvas');
+    const renderer = new THREE.WebGLRenderer({canvas:threeCanvas,antialias:true,alpha:true});
+    renderer.setClearColor(0x000000, 0);
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(innerWidth, innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, innerWidth/innerHeight, 0.01, 100);
+    camera.position.set(0, 0, 5.4);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.6));
+    const key = new THREE.DirectionalLight(0xffffff, 1.0);
+    key.position.set(2,4,3); scene.add(key);
+    const fill = new THREE.DirectionalLight(0x7EDCFF, 0.4);
+    fill.position.set(-3,0,-2); scene.add(fill);
+
+    const pivot = new THREE.Group();
+    pivot.position.y = 0.4;
+    scene.add(pivot);
+
+    function speak(text){ if (window.AndroidBridge) AndroidBridge.speakAvatarLine(text); }
+    function setStatus(icon, title, sub){ if (window.AndroidBridge) AndroidBridge.setStatus(icon, title, sub); }
+    function speakDelay(text){
+    const words = (text||'').split(' ').length;
+    return Math.max(2200, words * 430);
+    }
+
+    let step = 0;
+    const groups = {}, models = {}, cableCurves = {}, cableMeshes = {};
+    let deviceLoading = null;
+    let pinchStartDist = null, pinchStartScale = 1, pinchStartAngle = null, pinchStartRotY = 0;
+
+    function currentId(){
+    if (step === 0) return '__center__';
+    if (step > SECONDARY.length) return null;
+    return SECONDARY[step-1].id;
+    }
+    function labelOf(id){ if (id==='__center__') return CENTER.label; const e=SECONDARY.find(s=>s.id===id); return e?e.label:id; }
+
+    function init(){
+    const centerGroup = new THREE.Group();
+    pivot.add(centerGroup);
+    groups['__center__'] = centerGroup;
+    SECONDARY.forEach(s=>{
+    const g = new THREE.Group();
+    pivot.add(g);
+    groups[s.id] = g;
+    });
+    setStatus('🗄️', CENTER.label, INTRO_LINE);
+    speak(INTRO_LINE);
+    buildDeviceBar();
+    }
+
+    function buildDeviceBar(){
+    const bar = document.getElementById('deviceBar');
+    bar.style.display = 'flex';
+    bar.innerHTML = '';
+    const centerBtn = document.createElement('button');
+    centerBtn.className = 'devBtn';
+    centerBtn.id = 'dbtn-__center__';
+    centerBtn.textContent = CENTER.label;
+    centerBtn.addEventListener('touchend', (e)=>{ e.preventDefault(); e.stopPropagation(); onDeviceBarTap('__center__'); }, {passive:false});
+    bar.appendChild(centerBtn);
+    SECONDARY.forEach(s=>{
+    const btn = document.createElement('button');
+    btn.className = 'devBtn';
+    btn.id = 'dbtn-'+s.id;
+    btn.textContent = s.label;
+    btn.addEventListener('touchend', (e)=>{ e.preventDefault(); e.stopPropagation(); onDeviceBarTap(s.id); }, {passive:false});
+    bar.appendChild(btn);
+    });
+    updateDeviceBar();
+    }
+
+    function updateDeviceBar(){
+    const curId = currentId();
+    if (curId === null) return;
+    const allIds = ['__center__'].concat(SECONDARY.map(s=>s.id));
+    allIds.forEach((id,i)=>{
+    const btn = document.getElementById('dbtn-'+id);
+    if (!btn) return;
+    btn.classList.remove('active','done');
+    if (i < step) btn.classList.add('done');
+    else if (id === curId) btn.classList.add('active');
+    });
+    }
+
+    function onDeviceBarTap(id){
+    if (id !== currentId()) return;
+    if (models[id]) return;
+    requestModel(id);
+    }
+
+    function requestModel(id){
+    deviceLoading = id;
+    const glb = id === '__center__' ? CENTER.glb : SECONDARY.find(s=>s.id===id).glb;
+    const pos = id === '__center__' ? [0,0,0] : SECONDARY.find(s=>s.id===id).pos;
+    groups[id].position.set(pos[0], pos[1], pos[2]);
+    if (window.AndroidBridge) AndroidBridge.requestGlb(glb);
+    else { buildPlaceholder(id, glb); onModelLoaded(id); }
+    }
+
+    window.onGlbReady = function(){
+    const id = deviceLoading;
+    deviceLoading = null;
+    if (!id) return;
+    const glb = id === '__center__' ? CENTER.glb : SECONDARY.find(s=>s.id===id).glb;
+    const total = AndroidBridge.getGlbLength();
+    if (total === 0) { buildPlaceholder(id, glb); onModelLoaded(id); return; }
+    const chunks = []; let offset = 0;
+    function fetchNext(){
+    if (offset >= total){
+    const b64 = chunks.join('');
+    const binary = atob(b64);
+    const buf = new ArrayBuffer(binary.length);
+    const view = new Uint8Array(buf);
+    for (let i=0;i<binary.length;i++) view[i]=binary.charCodeAt(i);
+    new THREE.GLTFLoader().parse(buf,'',function(gltf){
+    setModel(id, gltf.scene); onModelLoaded(id);
+    }, function(){ buildPlaceholder(id, glb); onModelLoaded(id); });
+    return;
+    }
+    const chunk = AndroidBridge.getGlbChunk(offset);
+    if (!chunk || chunk.length===0){ buildPlaceholder(id, glb); onModelLoaded(id); return; }
+    chunks.push(chunk); offset += chunk.length;
+    setTimeout(fetchNext,0);
+    }
+    fetchNext();
+    };
+
+    function setModel(id, model){
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const ctr = box.getCenter(new THREE.Vector3());
+    const target = id === '__center__' ? 1.0 : 0.4;
+    const sc = target / Math.max(size.x, size.y, size.z);
+    model.scale.setScalar(sc);
+    model.position.sub(ctr.multiplyScalar(sc));
+    groups[id].add(model);
+    models[id] = addHitArea(id, target);
+    }
+
+    function buildPlaceholder(id, glb){
+    const isCenter = id === '__center__';
+    const geo = isCenter ? new THREE.BoxGeometry(1.1,0.42,0.6) : new THREE.BoxGeometry(0.35,0.22,0.25);
+    const mat = new THREE.MeshStandardMaterial({color: isCenter?0x2A6B20:0x4A6AE0});
+    const mesh = new THREE.Mesh(geo, mat);
+    groups[id].add(mesh);
+    models[id] = addHitArea(id, isCenter ? 1.0 : 0.4);
+    }
+
+    function addHitArea(id, approxSize){
+    const geo = new THREE.SphereGeometry(approxSize * 0.75, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({transparent:true, opacity:0, depthWrite:false});
+    const hitMesh = new THREE.Mesh(geo, mat);
+    groups[id].add(hitMesh);
+    return hitMesh;
+    }
+
+    function onModelLoaded(id){
+    if (id === '__center__'){
+    speak(CENTER_PLACED_LINE);
+    advanceStep();
+    } else {
+    const s = SECONDARY.find(x=>x.id===id);
+    addCable(id, '__center__');
+    const fullLine = s.connectLine+' '+s.label+' is now connected to the '+CENTER.label+'.';
+    setStatus('✅', s.label+' connected!', fullLine);
+    speak(fullLine);
+    advanceStep();
+    }
+    }
+
+    function advanceStep(){
+    step++;
+    updateDeviceBar();
+    if (step > SECONDARY.length){ finishBuilding(); return; }
+    const nextId = currentId();
+    const nextEntry = nextId === '__center__' ? null : SECONDARY.find(s=>s.id===nextId);
+    const label = nextId === '__center__' ? CENTER.label : nextEntry.label;
+    const line = (nextEntry && nextEntry.promptLine) || ('Now tap '+label+' to add it.');
+    setStatus('👆','Next: '+label, line);
+    speak(line);
+    }
+
+    function finishBuilding(){
+    document.getElementById('deviceBar').style.display = 'none';
+    setStatus('✅','Network complete!', READY_LINE);
+    speak(READY_LINE);
+    setTimeout(()=>{ autoPlayDemo(); }, speakDelay(READY_LINE) + 1500);
+    }
+
+    function addCable(fromId, toId){
+    const a = groups[fromId].position.clone();
+    const b = groups[toId].position.clone();
+    const mid = a.clone().add(b).multiplyScalar(0.5); mid.y -= 0.05;
+    const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
+    cableCurves[fromId] = curve;
+    const geo = new THREE.TubeGeometry(curve, 16, 0.02, 8, false);
+    const mat = new THREE.MeshStandardMaterial({color:0x4CE64C, emissive:0x4CE64C, emissiveIntensity:0.9, roughness:0.4});
+    const tube = new THREE.Mesh(geo, mat);
+    pivot.add(tube);
+    cableMeshes[fromId] = tube;
+    let t0 = performance.now();
+    function pulse(now){
+    const t = (now - t0) / 700;
+    if (t < 1){ mat.emissiveIntensity = 0.9 + Math.sin(t*Math.PI)*1.2; requestAnimationFrame(pulse); }
+    else { mat.emissiveIntensity = 0.5; }
+    }
+    requestAnimationFrame(pulse);
+    }
+
+    function setCableColor(id, hexColor, glow){
+    const tube = cableMeshes[id];
+    if (!tube) return;
+    tube.material.color.set(hexColor);
+    tube.material.emissive.set(hexColor);
+    tube.material.emissiveIntensity = glow ? 0.9 : 0.4;
+    }
+    function resetAllCables(){ for (const id in cableMeshes) setCableColor(id, 0x4CE64C, false); }
+
+    function createPacketMesh(){
+    const geo = new THREE.SphereGeometry(0.045, 12, 12);
+    const mat = new THREE.MeshBasicMaterial({color:0xFFD84A});
+    const mesh = new THREE.Mesh(geo, mat);
+    pivot.add(mesh);
+    return mesh;
+    }
+    function animateAlongCurve(curve, reverse, duration, onDone){
+    const mesh = createPacketMesh();
+    const start = performance.now();
+    function frame(now){
+    let t = (now - start) / duration;
+    if (t > 1) t = 1;
+    const tt = reverse ? (1 - t) : t;
+    mesh.position.copy(curve.getPoint(tt));
+    if (t < 1) requestAnimationFrame(frame);
+    else { pivot.remove(mesh); onDone && onDone(); }
+    }
+    requestAnimationFrame(frame);
+    }
+
+    const DEMO_CLIENTS = ['client','client2','client3'];
+
+function autoPlayDemo(){
+sendRequestFor(0);
+}
+
+function sendRequestFor(i){
+if (i >= DEMO_CLIENTS.length){
+setStatus('✅','All requests handled!', 'The Server just handled three separate clients, one after another — this is normal, everyday Server behaviour.');
+speak('The Server just handled three separate clients, one after another — this is completely normal, everyday Server behaviour.');
+return;
+}
+const clientId = DEMO_CLIENTS[i];
+resetAllCables();
+setCableColor(clientId, 0x4CE64C, true);
+const introLine = i === 0 ? DEMO_INTRO_LINE : 'Now '+labelOf(clientId)+' sends its own request.';
+setStatus('📤',labelOf(clientId)+' → Server', introLine);
+speak(introLine);
+setTimeout(()=>{
+animateAlongCurve(cableCurves[clientId], false, 1500, ()=>{
+setStatus('⏳','Server processing...', DEMO_PROCESS_LINE);
+speak(DEMO_PROCESS_LINE);
+setTimeout(()=>{
+animateAlongCurve(cableCurves[clientId], true, 1500, ()=>{
+setStatus('✅','Response delivered!', labelOf(clientId)+' received its response.');
+setTimeout(()=>{ sendRequestFor(i+1); }, 1800);
+});
+}, speakDelay(DEMO_PROCESS_LINE));
+});
+}, speakDelay(introLine));
+}
+
+    const uiCanvas = document.getElementById('uiCanvas');
+    uiCanvas.width = innerWidth; uiCanvas.height = innerHeight;
+    function touchDist(t1,t2){ return Math.hypot(t1.clientX-t2.clientX, t1.clientY-t2.clientY); }
+    function touchAngle(t1,t2){ return Math.atan2(t2.clientY-t1.clientY, t2.clientX-t1.clientX); }
+
+    uiCanvas.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if (step > SECONDARY.length) return;
+    if (e.touches.length >= 2){
+    const g = groups[currentId()];
+    pinchStartDist = touchDist(e.touches[0], e.touches[1]);
+    pinchStartScale = g.scale.x;
+    pinchStartAngle = touchAngle(e.touches[0], e.touches[1]);
+    pinchStartRotY = THREE.MathUtils.radToDeg(g.rotation.y);
+    }
+    }, {passive:false});
+
+    uiCanvas.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    if (step > SECONDARY.length) return;
+    if (e.touches.length >= 2 && pinchStartDist != null){
+    const g = groups[currentId()];
+    const dist = touchDist(e.touches[0], e.touches[1]);
+    const scale = Math.min(2.5, Math.max(0.4, pinchStartScale*(dist/pinchStartDist)));
+    g.scale.setScalar(scale);
+    const angle = touchAngle(e.touches[0], e.touches[1]);
+    const rotY = pinchStartRotY + THREE.MathUtils.radToDeg(angle - pinchStartAngle);
+    g.rotation.y = THREE.MathUtils.degToRad(rotY);
+    }
+    }, {passive:false});
+
+    uiCanvas.addEventListener('touchend', e=>{
+    e.preventDefault();
+    if (pinchStartDist != null){ pinchStartDist = null; return; }
+    }, {passive:false});
+
+    function animate(){ requestAnimationFrame(animate); renderer.render(scene, camera); }
+    animate();
+
+    window.addEventListener('resize', ()=>{
+    camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+    uiCanvas.width = innerWidth; uiCanvas.height = innerHeight;
+    });
+
+    window.addEventListener('load', function(){
+    var attempts = 0;
+    (function wait(){
+    if (typeof THREE !== 'undefined' && THREE.GLTFLoader){ init(); }
+    else if (attempts++ < 30){ setTimeout(wait, 200); }
+    })();
+    });
+</script>
+</body>
+</html>

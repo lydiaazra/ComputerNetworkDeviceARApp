@@ -24,6 +24,8 @@ public class DeviceSelectActivity extends AppCompatActivity {
         setupCard(R.id.cardNIC, "NIC");
         setupCard(R.id.cardRepeater, "Repeater");
         setupCard(R.id.cardGateway, "Gateway");
+        setupCard(R.id.cardServer, "Server");
+        setupCard(R.id.cardModem, "Modem");
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
     }

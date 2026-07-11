@@ -36,14 +36,11 @@ public class DashboardActivity extends AppCompatActivity {
         findViewById(R.id.cardQuiz).setOnClickListener(v ->
                 startActivity(new Intent(this, QuizLevelActivity.class)));
 
-        findViewById(R.id.cardCableAR).setOnClickListener(v ->
-                startActivity(new Intent(this, CableARActivity.class)));
-
         findViewById(R.id.cardAssemblyAR).setOnClickListener(v ->
                 startActivity(new Intent(this, TopologySelectActivity.class)));
 
         findViewById(R.id.cardDeviceFlowAR).setOnClickListener(v ->
-                startActivity(new Intent(this, DeviceFlowDemoActivity.class)));
+                startActivity(new Intent(this, DeviceFlowSelectActivity.class)));
 
         findViewById(R.id.btnLogout).setOnClickListener(v -> {
             mAuth.signOut();
